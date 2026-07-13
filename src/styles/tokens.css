@@ -1,0 +1,53 @@
+:root {
+  --color-canvas: #eef3f2;
+  --color-canvas-deep: #e5ecea;
+  --color-surface: #ffffff;
+  --color-surface-soft: #f6f9f8;
+  --color-surface-raised: #fbfdfc;
+  --color-text: #172927;
+  --color-text-muted: #637573;
+  --color-text-soft: #82918f;
+  --color-border: #d7e1df;
+  --color-border-strong: #bdccca;
+  --color-primary: #087c75;
+  --color-primary-dark: #075f5a;
+  --color-primary-soft: #e7f4f2;
+  --color-blue: #2f668d;
+  --color-blue-soft: #eaf2f8;
+  --color-warning: #9a5d0b;
+  --color-warning-soft: #fff6e6;
+  --color-warning-border: #edcf99;
+  --color-danger: #a13c3c;
+  --color-danger-soft: #fff0ef;
+  --color-success: #17725a;
+  --color-success-soft: #e9f5ef;
+
+  --font-sans: 'Avenir Next', 'Century Gothic', 'Trebuchet MS', sans-serif;
+  --font-display: 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
+  --font-mono: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --shadow-panel: 0 18px 48px rgba(32, 61, 58, 0.09);
+  --shadow-control: 0 5px 14px rgba(30, 64, 61, 0.1);
+  --focus-ring: 0 0 0 3px rgba(8, 124, 117, 0.22);
+  --content-width: 1380px;
+
+  color: var(--color-text);
+  background: var(--color-canvas);
+  font-family: var(--font-sans);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
