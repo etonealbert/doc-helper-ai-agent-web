@@ -1,0 +1,198 @@
+name: Frontend Deployment
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: frontend-production
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION }}
+  VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
+  VITE_APP_ENV: production
+
+jobs:
+  quality:
+    name: Validate and build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run lint
+        run: npm run lint
+
+      - name: Check formatting
+        run: npm run format:check
+
+      - name: Run TypeScript checks
+        run: npm run typecheck
+
+      - name: Run tests
+        run: npm run test:run
+
+      - name: Build production application
+        run: npm run build
+
+      - name: Upload tested build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist-${{ github.sha }}
+          path: dist
+          if-no-files-found: error
+          retention-days: 7
+
+  deploy:
+    name: Deploy to S3 and CloudFront
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    needs: quality
+    runs-on: ubuntu-latest
+
+    environment:
+      name: production
+      url: ${{ vars.FRONTEND_URL }}
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Download tested build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist-${{ github.sha }}
+          path: dist
+
+      - name: Configure AWS credentials through OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Upload non-hashed public files
+        shell: bash
+        env:
+          FRONTEND_BUCKET_NAME: ${{ vars.FRONTEND_BUCKET_NAME }}
+        run: |
+          set -euo pipefail
+
+          aws s3 sync dist/ "s3://${FRONTEND_BUCKET_NAME}/" \
+            --delete \
+            --exclude "index.html" \
+            --exclude "assets/*" \
+            --cache-control "public,max-age=300"
+
+      - name: Upload immutable hashed assets
+        shell: bash
+        env:
+          FRONTEND_BUCKET_NAME: ${{ vars.FRONTEND_BUCKET_NAME }}
+        run: |
+          set -euo pipefail
+
+          if [ -d "dist/assets" ]; then
+            aws s3 sync dist/assets/ "s3://${FRONTEND_BUCKET_NAME}/assets/" \
+              --delete \
+              --cache-control "public,max-age=31536000,immutable"
+          fi
+
+      - name: Upload uncached application shell
+        shell: bash
+        env:
+          FRONTEND_BUCKET_NAME: ${{ vars.FRONTEND_BUCKET_NAME }}
+        run: |
+          set -euo pipefail
+
+          aws s3 cp dist/index.html \
+            "s3://${FRONTEND_BUCKET_NAME}/index.html" \
+            --content-type "text/html; charset=utf-8" \
+            --cache-control "no-cache,no-store,must-revalidate"
+
+      - name: Invalidate CloudFront application shell
+        id: invalidate
+        shell: bash
+        env:
+          DISTRIBUTION_ID: ${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}
+        run: |
+          set -euo pipefail
+
+          INVALIDATION_ID=$(aws cloudfront create-invalidation \
+            --distribution-id "${DISTRIBUTION_ID}" \
+            --paths "/" "/index.html" \
+            --query "Invalidation.Id" \
+            --output text)
+
+          echo "invalidation_id=${INVALIDATION_ID}" >> "$GITHUB_OUTPUT"
+          echo "Created invalidation: ${INVALIDATION_ID}"
+
+      - name: Wait for CloudFront invalidation
+        shell: bash
+        env:
+          DISTRIBUTION_ID: ${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}
+          INVALIDATION_ID: ${{ steps.invalidate.outputs.invalidation_id }}
+        run: |
+          set -euo pipefail
+
+          aws cloudfront wait invalidation-completed \
+            --distribution-id "${DISTRIBUTION_ID}" \
+            --id "${INVALIDATION_ID}"
+
+      - name: Run production smoke test
+        shell: bash
+        env:
+          FRONTEND_URL: ${{ vars.FRONTEND_URL }}
+        run: |
+          set -euo pipefail
+
+          for attempt in {1..12}; do
+            echo "Smoke-test attempt ${attempt}/12"
+
+            if curl \
+              --fail \
+              --silent \
+              --show-error \
+              --location \
+              --retry 2 \
+              --connect-timeout 10 \
+              --max-time 30 \
+              "${FRONTEND_URL}" > /dev/null; then
+              echo "Frontend deployment verified."
+              exit 0
+            fi
+
+            sleep 10
+          done
+
+          echo "Frontend smoke test failed."
+          exit 1
+
+      - name: Write deployment summary
+        shell: bash
+        env:
+          FRONTEND_URL: ${{ vars.FRONTEND_URL }}
+          API_URL: ${{ vars.VITE_API_BASE_URL }}
+        run: |
+          {
+            echo "## Frontend deployment"
+            echo ""
+            echo "- Commit: \`${GITHUB_SHA}\`"
+            echo "- Frontend: ${FRONTEND_URL}"
+            echo "- Backend: ${API_URL}"
+            echo "- CloudFront invalidation: \`${{ steps.invalidate.outputs.invalidation_id }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
