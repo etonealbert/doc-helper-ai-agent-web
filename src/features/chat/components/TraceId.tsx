@@ -1,9 +1,11 @@
 import { useState } from 'react'
 import { Icon } from '../../../shared/components/Icon'
+import { useLocalization } from '../../../shared/i18n/localizationContext'
 import { compactTraceId } from '../../../shared/lib/format'
 import styles from '../../../styles/ui.module.css'
 
 export function TraceId({ traceId }: { traceId: string }) {
+  const { messages } = useLocalization()
   const [copied, setCopied] = useState(false)
 
   const copy = async () => {
@@ -18,17 +20,19 @@ export function TraceId({ traceId }: { traceId: string }) {
 
   return (
     <div className={styles.trace}>
-      <span className={styles.metaLabel}>Trace</span>
+      <span className={styles.metaLabel}>{messages.chat.trace}</span>
       <code title={traceId}>{compactTraceId(traceId)}</code>
       <button
         type="button"
         onClick={() => void copy()}
-        aria-label={copied ? 'Trace ID copied' : 'Copy trace ID'}
+        aria-label={
+          copied ? messages.chat.traceCopied : messages.chat.copyTrace
+        }
       >
         <Icon name={copied ? 'check' : 'copy'} size={14} />
       </button>
       <span className={styles.visuallyHidden} aria-live="polite">
-        {copied ? 'Trace ID copied to clipboard.' : ''}
+        {copied ? messages.chat.traceCopiedAnnouncement : ''}
       </span>
     </div>
   )

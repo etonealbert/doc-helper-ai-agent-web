@@ -59,20 +59,24 @@ Request:
 
 ```json
 {
-  "message": "How much does teeth whitening cost?",
+  "message": "¿Cuánto cuesta el blanqueamiento dental?",
   "user_id": "web-user-uuid",
-  "session_id": "session-uuid"
+  "session_id": "session-uuid",
+  "locale": "es"
 }
 ```
 
 The composer accepts up to 2,000 characters and trims surrounding whitespace.
-The UI blocks empty and concurrent submissions.
+The UI blocks empty and concurrent submissions. Supported locales are strictly
+`es` and `en`. Omitting `locale` defaults to Spanish on the backend; the frontend
+always sends the language selected when the operation begins. A retry retains the
+failed operation's locale even if the interface language changes meanwhile.
 
 Response:
 
 ```json
 {
-  "message": "User-facing response",
+  "message": "Respuesta para el usuario",
   "classification": "pricing_question",
   "actions": [
     {
@@ -83,7 +87,8 @@ Response:
   ],
   "requires_human": false,
   "sources": ["pricing.md"],
-  "trace_id": "uuid-or-trace-value"
+  "trace_id": "uuid-or-trace-value",
+  "locale": "es"
 }
 ```
 
@@ -97,7 +102,8 @@ Supported classifications:
 - `general_question`
 - `human_escalation`
 
-The Zod schema requires `message`, `classification`, and `trace_id`. For parity
+The Zod schema requires `message`, `classification`, `trace_id`, and a supported
+`locale`. For parity
 with backend defaults, omitted `actions` and `sources` become empty arrays,
 omitted `requires_human` becomes `false`, and an omitted `action.result` becomes
 `null`. Explicit malformed values are still rejected.
@@ -107,7 +113,9 @@ Unsupported classifications or statuses are rejected. When `action.result` is
 present, it must be an object with arbitrary properties; arrays, scalar values,
 and explicit `null` are rejected. An omitted result becomes frontend `null`.
 Result objects are sanitized before text display, and arbitrary HTML is never
-rendered.
+rendered. Classification values, tool names, action statuses, result keys, source
+filenames, and trace IDs remain canonical machine values; the frontend translates
+only their known presentation labels.
 
 Chat executes through a TanStack Query mutation with automatic retry disabled.
 The mutation is invoked without variables, returns no response data, uses zero
@@ -119,14 +127,26 @@ request, response, failure, and transcript remain local to the chat hook.
 
 ## Error Contract
 
-The request layer safely combines error metadata from the response root and an
-object-valued `detail` property. For each recognized field, a nested value takes
-precedence and a root value supplies a fallback, so mixed envelopes retain all
-available metadata. Recognized fields include:
+The request layer safely combines error metadata from the response root and
+object-valued `detail` or `error` properties. For each recognized field, `detail`
+takes precedence, then `error`, then root string fields, so mixed envelopes retain
+all available metadata. Recognized fields include:
 
 ```json
 {
   "detail": {
+    "message": "Safe backend message",
+    "code": "crm_unavailable",
+    "trace_id": "trace-value"
+  }
+}
+```
+
+The backend's application-error shape is also supported:
+
+```json
+{
+  "error": {
     "message": "Safe backend message",
     "code": "crm_unavailable",
     "trace_id": "trace-value"

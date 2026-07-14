@@ -26,6 +26,7 @@ export interface ChatResponse {
   requiresHuman: boolean
   sources: string[]
   traceId: string
+  locale: Locale
 }
 
 export interface ConversationMessage {
@@ -34,4 +35,6 @@ export interface ConversationMessage {
   content: string
   response?: ChatResponse
   isWelcome?: boolean
+  locale?: Locale
 }
+import type { Locale } from '../../../shared/i18n/messages'

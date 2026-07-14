@@ -97,9 +97,12 @@ export function sanitizeStructuredData(value: unknown): unknown {
   )
 }
 
-export function formatStructuredData(value: unknown): string {
+export function formatStructuredData(
+  value: unknown,
+  emptyLabel = 'No result details',
+): string {
   const safeValue = sanitizeStructuredData(value)
-  if (safeValue === null || safeValue === undefined) return 'No result details'
+  if (safeValue === null || safeValue === undefined) return emptyLabel
   if (typeof safeValue === 'string') return safeValue
   if (typeof safeValue === 'number' || typeof safeValue === 'boolean') {
     return String(safeValue)

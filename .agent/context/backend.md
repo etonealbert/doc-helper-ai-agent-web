@@ -28,13 +28,16 @@ integers.
 
 ### `POST /api/chat`
 
-Request fields: `message`, `user_id`, and `session_id`.
+Request fields: `message`, `user_id`, `session_id`, and `locale`. Supported locale
+values are `es` and `en`; omission defaults to Spanish. The frontend sends the
+locale captured when the operation starts and keeps it for retries.
 
 Required response fields:
 
 - `message`
 - supported `classification`
 - `trace_id`
+- supported `locale`
 
 Backend-defaulted response fields:
 
@@ -59,7 +62,8 @@ Supported classifications are `appointment_request`, `pricing_question`,
 - Keep transport behavior in `src/shared/api/request.ts`.
 - Preserve typed `ApiError` metadata: status, code, trace ID, and kind.
 - Combine safe error fields from the root and object-valued `detail` envelope,
-  preferring nested values per field and retaining root fallbacks.
+  plus the backend's object-valued root `error` envelope. Prefer `detail`, then
+  `error`, then root string values per field.
 - Preserve specific handling for `422`, `429`, `503`, `crm_unavailable`, generic
   `5xx`, invalid JSON, invalid schema, timeout, abort, and network errors.
 - Never show a failed appointment, callback, ticket, or escalation as successful.
@@ -84,6 +88,11 @@ The backend answer is displayed as answer text. The frontend may add safety
 framing but must not reinterpret it clinically. For `emergency_or_pain` or
 `requires_human=true`, show the warning without claiming emergency services were
 contacted. Never add diagnosis, treatment, or medication guidance.
+
+The coordinated backend supports bilingual classification, safety detection,
+scheduling parsing, locale-filtered RAG, and deterministic response templates.
+Machine classifications, tool names, statuses, specialty values, structured
+result keys, and source names remain canonical rather than localized on the wire.
 
 When the contract changes, update this file, `docs/api.md`, endpoint validators,
 and relevant UI/tests together.

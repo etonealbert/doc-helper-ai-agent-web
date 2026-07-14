@@ -18,6 +18,8 @@ state, and trace IDs so the workflow remains inspectable.
 - CI and deployment workflow definitions: present but not run by this change
 - Frontend Terraform: applied and infrastructure-verified on 2026-07-14
 - Backend CORS, GitHub environment setup, and asset deployment: remaining work
+- Spanish-default English/Spanish frontend and coordinated backend contract:
+  implemented locally, not deployment-verified
 
 The AWS origin, CDN, certificate, DNS aliases, and deployment role are provisioned,
 but this working tree has not been deployed. The empty origin currently returns an
@@ -28,6 +30,8 @@ expected CloudFront `403`; backend CORS was not changed or verified.
 - Responsive agent workspace for mobile, tablet, and desktop
 - Multiline composer with Enter and Shift+Enter behavior
 - Starter prompts for general, pricing, appointment, policy, and safety routes
+- Spanish-by-default interface with an English switcher and localized metadata,
+  accessibility labels, errors, safety framing, and workflow labels
 - TanStack Query ownership for health, document, and chat request lifecycles
 - Zod validation of all consumed API responses
 - Visible classifications, tool results, sources, and copyable trace IDs
@@ -38,12 +42,15 @@ expected CloudFront `403`; backend CORS was not changed or verified.
 - Keyboard focus states, semantic markup, live regions, and reduced-motion support
 - Recursive redaction of sensitive-looking keys before displaying tool data
 - Vitest and React Testing Library coverage isolated from the deployed API by MSW
+- Per-request `es`/`en` chat locale propagation with language-stable retries and
+  in-flight responses
 
 ## Architecture
 
 ```mermaid
 flowchart LR
     Browser[Browser] --> App[React application composition]
+    App --> Locale[Memory-only localization provider]
     App --> Query[TanStack Query hooks]
     App --> Chat[Local chat transcript]
     Query --> APIs[Feature API modules]
@@ -57,7 +64,9 @@ Visual components do not call `fetch` directly. Feature hooks own Query and loca
 state, feature API modules parse unknown responses with Zod, and the shared
 request layer owns transport, timeout, cancellation, and safe error conversion.
 Conversation messages stay in React state rather than Query cache or browser
-storage. See [docs/architecture.md](docs/architecture.md).
+storage. Locale also stays in React state; Spanish is restored on reload and only
+the generated session ID is stored locally. See
+[docs/architecture.md](docs/architecture.md).
 
 ## Technology
 
@@ -140,11 +149,11 @@ this change did not run it or verify a production deployment.
 
 The frontend consumes:
 
-| Method | Path             | Purpose                               |
-| ------ | ---------------- | ------------------------------------- |
-| `GET`  | `/health`        | API status, service name, and version |
-| `GET`  | `/api/documents` | Document names and chunk totals       |
-| `POST` | `/api/chat`      | Agent answer and workflow metadata    |
+| Method | Path             | Purpose                                      |
+| ------ | ---------------- | -------------------------------------------- |
+| `GET`  | `/health`        | API status, service name, and version        |
+| `GET`  | `/api/documents` | Document names and chunk totals              |
+| `POST` | `/api/chat`      | Localized agent answer and workflow metadata |
 
 Responses remain `unknown` until their endpoint Zod schema succeeds. See
 [docs/api.md](docs/api.md) for exact shapes, defaults, and error behavior.
@@ -173,7 +182,7 @@ Responses remain `unknown` until their endpoint Zod schema succeeds. See
 `-- src/
     |-- app/                   Configuration and application providers
     |-- features/              Chat, documents, and health ownership
-    |-- shared/                API, UI, hooks, and formatting utilities
+    |-- shared/                API, UI, localization, hooks, and formatting utilities
     |-- styles/                Reset, tokens, globals, and CSS Module styles
     `-- test/                  Fictional fixtures and MSW test infrastructure
 ```
@@ -204,6 +213,8 @@ separately owned backend CORS allowlist. See
 - No streaming responses
 - No document upload or administration UI
 - The pseudonymous user ID is regenerated on each page load
+- The selected interface language is intentionally memory-only and returns to
+  Spanish after reload
 
 Deferred work belongs in [docs/roadmap.md](docs/roadmap.md) and
 [.agent/tasks/backlog.md](.agent/tasks/backlog.md).
@@ -212,11 +223,11 @@ Deferred work belongs in [docs/roadmap.md](docs/roadmap.md) and
 
 Use fictional prompts only; do not enter patient or identifying data.
 
-1. Check the header's API status indicator.
-2. Ask, "What are the demonstration office hours?" and inspect the classification.
-3. Ask, "What is the fictional whitening price?" and inspect sources and tool data.
-4. Use the appointment starter prompt and verify actions are reported, not assumed.
-5. Use the marked safety prompt and verify the professional-help warning appears.
+1. Confirm that the interface starts in Spanish, then check the API status indicator.
+2. Ask, "¿Cuál es el horario de atención?" and inspect the classification.
+3. Ask, "¿Cuánto cuesta el blanqueamiento dental?" and inspect sources and tool data.
+4. Switch to English and verify the transcript and draft are preserved.
+5. Use the appointment and safety prompts and verify outcomes are not assumed.
 6. Copy a trace ID, then clear the conversation to rotate the session.
 
 ## Documentation

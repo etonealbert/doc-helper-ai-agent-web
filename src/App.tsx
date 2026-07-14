@@ -4,10 +4,13 @@ import { KnowledgeBaseSummary } from './features/documents/components/KnowledgeB
 import { HealthIndicator } from './features/health/components/HealthIndicator'
 import { useHealth } from './features/health/hooks/useHealth'
 import { Icon } from './shared/components/Icon'
+import { LanguageSwitcher } from './shared/components/LanguageSwitcher'
+import { useLocalization } from './shared/i18n/localizationContext'
 import styles from './styles/ui.module.css'
 
 function App() {
   const { health, status, refresh } = useHealth()
+  const { messages } = useLocalization()
 
   return (
     <div className={styles.appShell}>
@@ -16,7 +19,7 @@ function App() {
           <a
             className={styles.brand}
             href="#main-content"
-            aria-label="Doc Helper AI Agent home"
+            aria-label={messages.app.homeLabel}
           >
             <span className={styles.brandMark}>
               <Icon name="document" size={22} />
@@ -24,11 +27,14 @@ function App() {
             </span>
             <span className={styles.brandText}>
               <strong>Doc Helper AI Agent</strong>
-              <small>Workflow demonstration</small>
+              <small>{messages.app.workflowDemo}</small>
             </span>
           </a>
           <div className={styles.headerActions}>
-            <span className={styles.demoPill}>Portfolio demo</span>
+            <span className={styles.demoPill}>
+              {messages.app.portfolioDemo}
+            </span>
+            <LanguageSwitcher />
             <HealthIndicator
               health={health}
               status={status}
@@ -40,11 +46,11 @@ function App() {
                 href={appConfig.repositoryUrl}
                 target="_blank"
                 rel="noreferrer"
-                aria-label="Open project repository"
-                title="Project repository"
+                aria-label={messages.app.openRepository}
+                title={messages.app.repositoryTitle}
               >
                 <Icon name="github" size={18} />
-                <span>Source</span>
+                <span>{messages.app.source}</span>
                 <Icon name="external" size={13} />
               </a>
             )}
@@ -55,26 +61,21 @@ function App() {
       <main className={styles.mainContent} id="main-content">
         <section
           className={styles.disclaimer}
-          aria-label="Demonstration disclaimer"
+          aria-label={messages.app.disclaimerLabel}
         >
           <span className={styles.disclaimerIcon}>
             <Icon name="shield" size={18} />
           </span>
           <p>
-            <strong>Demonstration environment.</strong> No diagnosis or
-            treatment is provided. Do not enter real patient data. For urgent or
-            life-threatening situations, contact local emergency services or a
-            qualified professional.
+            <strong>{messages.app.disclaimerLead}</strong>{' '}
+            {messages.app.disclaimerBody}
           </p>
         </section>
         <ChatFeature knowledgeBaseSummary={<KnowledgeBaseSummary />} />
       </main>
 
       <footer className={styles.footer}>
-        <p>
-          Doc Helper AI Agent is an engineering portfolio demonstration, not a
-          medical service.
-        </p>
+        <p>{messages.app.footer}</p>
         <span>
           API <code>{appConfig.apiBaseUrl.replace('https://', '')}</code>
         </span>

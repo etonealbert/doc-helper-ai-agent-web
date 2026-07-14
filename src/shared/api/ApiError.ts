@@ -31,27 +31,32 @@ export class ApiError extends Error {
   }
 }
 
-export function getSafeErrorMessage(error: unknown): string {
+export function getSafeErrorMessage(
+  error: unknown,
+  locale: Locale = 'en',
+): string {
+  const copy = messages[locale].errors
   if (!(error instanceof ApiError)) {
-    return 'We could not reach the assistant. Check your connection and try again.'
+    return copy.network
   }
 
   switch (error.kind) {
     case 'validation':
-      return 'The request could not be processed. Review your message and try again.'
+      return copy.validation
     case 'rate_limit':
-      return 'The assistant is receiving many requests. Please wait a moment and retry.'
+      return copy.rateLimit
     case 'service_unavailable':
       return error.code === 'crm_unavailable'
-        ? 'The scheduling service is temporarily unavailable. No appointment or callback was created.'
-        : 'A supporting service is temporarily unavailable. Please try again shortly.'
+        ? copy.crmUnavailable
+        : copy.serviceUnavailable
     case 'server':
-      return 'The assistant encountered a server error. Please try again.'
+      return copy.server
     case 'timeout':
-      return 'The request took too long. No action has been confirmed; please retry.'
+      return copy.timeout
     case 'invalid_response':
-      return 'The assistant returned an unexpected response. Please try again.'
+      return copy.invalidResponse
     case 'network':
-      return 'We could not reach the assistant. Check your connection and try again.'
+      return copy.network
   }
 }
+import { messages, type Locale } from '../i18n/messages'

@@ -34,6 +34,7 @@ src/
 │   ├── api/                Cross-feature HTTP and error primitives
 │   ├── components/         Generic presentational primitives
 │   ├── hooks/              Cross-feature browser behavior
+│   ├── i18n/               Typed catalogs and locale context
 │   └── lib/                Pure utilities
 └── styles/                 Reset, tokens, globals, and CSS Modules
 ```
@@ -79,6 +80,22 @@ src/
 - Never inject backend HTML. Render answer text and structured data as text.
 - Keep source names and trace IDs inspectable without allowing them to break the
   layout.
+
+## Localization
+
+- Support exactly `es` and `en`; Spanish is the default after every reload.
+- Keep locale in the app-wide localization provider and never persist it. The
+  session ID remains the only `localStorage` value.
+- Put frontend-owned text in the typed catalog under `src/shared/i18n`.
+- Preserve user text and backend answer text exactly. Translate known machine-code
+  labels, but keep unknown identifiers, source names, trace IDs, and structured
+  result data unchanged.
+- Capture locale when a chat operation begins. Retries keep that locale and each
+  assistant message keeps the validated response locale.
+- Keep English and Spanish safety/error wording behaviorally equivalent, including
+  every non-confirmation statement.
+- Synchronize document language and metadata, and set `lang` on historical answer
+  text and its live announcement.
 
 ## Styling
 
