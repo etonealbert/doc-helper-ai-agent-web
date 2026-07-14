@@ -1,37 +1,25 @@
-import { useCallback, useEffect, useState } from 'react'
-import { fetchHealth, type HealthResponse } from '../api/healthApi'
+import { useQuery } from '@tanstack/react-query'
+import { fetchHealth } from '../api/healthApi'
 
 export type HealthState = 'checking' | 'online' | 'degraded' | 'unavailable'
 
 export function useHealth() {
-  const [health, setHealth] = useState<HealthResponse | null>(null)
-  const [status, setStatus] = useState<HealthState>('checking')
+  const query = useQuery({
+    queryKey: ['health'],
+    queryFn: ({ signal }) => fetchHealth(signal),
+    refetchInterval: 45_000,
+  })
 
-  const checkHealth = useCallback(async (signal?: AbortSignal) => {
-    try {
-      const response = await fetchHealth(signal)
-      setHealth(response)
-      setStatus(response.status.toLowerCase() === 'ok' ? 'online' : 'degraded')
-    } catch {
-      if (!signal?.aborted) setStatus('unavailable')
-    }
-  }, [])
+  let status: HealthState = 'checking'
+  if (query.isError) {
+    status = 'unavailable'
+  } else if (!query.isPending) {
+    status = query.data.status.toLowerCase() === 'ok' ? 'online' : 'degraded'
+  }
 
-  useEffect(() => {
-    let controller = new AbortController()
-    void checkHealth(controller.signal)
-
-    const intervalId = window.setInterval(() => {
-      controller.abort()
-      controller = new AbortController()
-      void checkHealth(controller.signal)
-    }, 45_000)
-
-    return () => {
-      controller.abort()
-      window.clearInterval(intervalId)
-    }
-  }, [checkHealth])
-
-  return { health, status, refresh: checkHealth }
+  return {
+    health: query.data ?? null,
+    status,
+    refresh: query.refetch,
+  }
 }

@@ -132,7 +132,9 @@
 
 .healthIndicator svg {
   opacity: 0;
-  transition: opacity 160ms ease, transform 250ms ease;
+  transition:
+    opacity 160ms ease,
+    transform 250ms ease;
 }
 
 .healthIndicator:hover svg,
@@ -759,7 +761,7 @@
 }
 
 .composer textarea::placeholder {
-  color: #899895;
+  color: var(--color-text-soft);
 }
 
 .composer textarea:disabled {

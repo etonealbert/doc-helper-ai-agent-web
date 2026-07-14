@@ -14,14 +14,18 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  AWS_REGION: ${{ vars.AWS_REGION }}
-  VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
+  AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
+  VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL || 'https://api.albertlukmanovlabs.lol' }}
   VITE_APP_ENV: production
+  VITE_GITHUB_REPOSITORY_URL: https://github.com/etonealbert/doc-helper-ai-agent-web
 
 jobs:
   quality:
     name: Validate and build
     runs-on: ubuntu-latest
+
+    environment:
+      name: production
 
     steps:
       - name: Checkout repository
@@ -108,7 +112,6 @@ jobs:
 
           if [ -d "dist/assets" ]; then
             aws s3 sync dist/assets/ "s3://${FRONTEND_BUCKET_NAME}/assets/" \
-              --delete \
               --cache-control "public,max-age=31536000,immutable"
           fi
 
@@ -186,7 +189,7 @@ jobs:
         shell: bash
         env:
           FRONTEND_URL: ${{ vars.FRONTEND_URL }}
-          API_URL: ${{ vars.VITE_API_BASE_URL }}
+          API_URL: ${{ env.VITE_API_BASE_URL }}
         run: |
           {
             echo "## Frontend deployment"

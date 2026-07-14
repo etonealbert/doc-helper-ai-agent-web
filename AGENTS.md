@@ -16,24 +16,25 @@ and [docs/api.md](docs/api.md) for endpoint contracts.
 
 ## Commands
 
-Use only scripts that currently exist in `package.json`:
+The required quality gate is:
 
-```bash
-npm run dev
+```text
 npm run lint
+npm run format:check
+npm run typecheck
+npm run test:run
 npm run build
-npm run preview
 ```
 
-`npm run build` includes the TypeScript project build. There is no automated test,
-format-check, or standalone type-check script yet. Do not claim a command passed
-unless it was actually run in the current working tree.
+`npm run dev`, `npm run format`, and `npm run preview` are also available for local
+development. Tests use MSW and must not call the deployed API. Do not claim a
+command passed unless it was actually run in the current working tree.
 
 ## Architecture Rules
 
 - Keep endpoint code in `src/features/<feature>/api`.
-- Treat every network response as `unknown` until runtime validation succeeds.
-- Keep request lifecycle and feature state in hooks.
+- Treat every network response as `unknown` until its feature Zod schema succeeds.
+- Keep Query lifecycle and feature state in hooks.
 - Keep visual components free of direct `fetch` calls.
 - Put cross-feature primitives in `src/shared`; do not import one feature's
   internals into another feature.
@@ -79,17 +80,20 @@ The full contract and CORS assumptions are in:
 
 ## AWS Boundary
 
-No AWS infrastructure currently exists in this repository. The intended design is
-a private S3 origin behind CloudFront OAC, Route 53 aliases, and an ACM certificate
-in `us-east-1`. Do not run Terraform, make AWS changes, commit, or push unless the
-user explicitly authorizes it. Read [.agent/context/aws.md](.agent/context/aws.md)
-before adding infrastructure or deployment workflows.
+No Terraform or provisioned AWS infrastructure exists in this repository. A
+deployment workflow definition is present but has not been run or
+production-verified by this change. The intended design is a private S3 origin
+behind CloudFront OAC, Route 53 aliases, and an ACM certificate in `us-east-1`.
+Apex DNS and backend CORS remain external blockers. Do not run Terraform, deploy,
+make AWS changes, commit, or push unless the user explicitly authorizes it. Read
+[.agent/context/aws.md](.agent/context/aws.md) first.
 
 ## Authoritative Files
 
 - Runtime configuration: `src/app/config.ts`
 - HTTP behavior: `src/shared/api/request.ts` and `src/shared/api/ApiError.ts`
-- Endpoint validation: feature `api` modules
+- Endpoint validation: feature Zod schemas in `api` modules
+- Query configuration: `src/app/queryClient.ts` and `src/app/providers.tsx`
 - Chat state: `src/features/chat/hooks/useChat.ts`
 - Product composition: `src/App.tsx` and `src/features/chat/ChatFeature.tsx`
 - Visual tokens and layout: `src/styles/tokens.css` and
@@ -104,8 +108,8 @@ before adding infrastructure or deployment workflows.
 2. Preserve runtime validation, request cancellation, and safe error language.
 3. Verify keyboard behavior, focus visibility, reduced motion, and narrow layouts
    for UI changes.
-4. Run the narrowest relevant available check, then `npm run lint` and
-   `npm run build` when command execution is allowed.
+4. Run the narrowest relevant check, then the complete five-command quality gate
+   when command execution is allowed.
 5. Update the matching `docs/` and `.agent/context/` files when contracts,
    architecture, deployment, or conventions change.
 

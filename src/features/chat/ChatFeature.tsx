@@ -1,14 +1,19 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { appConfig } from '../../app/config'
 import { Icon } from '../../shared/components/Icon'
-import { KnowledgeBaseSummary } from '../documents/components/KnowledgeBaseSummary'
 import { ChatComposer } from './components/ChatComposer'
 import { ChatErrorNotice } from './components/ChatErrorNotice'
 import { ChatMessage } from './components/ChatMessage'
 import { useChat } from './hooks/useChat'
 import styles from '../../styles/ui.module.css'
 
-const starterPrompts = [
+interface StarterPrompt {
+  label: string
+  type: string
+  safety?: boolean
+}
+
+const starterPrompts: readonly StarterPrompt[] = [
   { label: 'What are your opening hours?', type: 'General' },
   { label: 'How much does teeth whitening cost?', type: 'Pricing' },
   {
@@ -21,15 +26,25 @@ const starterPrompts = [
     type: 'Safety demo',
     safety: true,
   },
-] as const
+]
 
-export function ChatFeature() {
+interface ChatFeatureProps {
+  knowledgeBaseSummary: ReactNode
+}
+
+export function ChatFeature({ knowledgeBaseSummary }: ChatFeatureProps) {
   const { messages, isPending, error, sessionId, submit, clear, retry } =
     useChat()
   const [draft, setDraft] = useState('')
   const viewportRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const stickToBottom = useRef(true)
+  const assistantAnnouncement =
+    isPending || error
+      ? ''
+      : (messages.findLast(
+          (message) => message.role === 'assistant' && !message.isWelcome,
+        )?.content ?? '')
 
   useEffect(() => {
     if (!stickToBottom.current) return
@@ -66,6 +81,14 @@ export function ChatFeature() {
   return (
     <div className={styles.workspace}>
       <section className={styles.chatPanel} aria-labelledby="chat-title">
+        <div
+          className={styles.visuallyHidden}
+          data-testid="assistant-announcement"
+          aria-live="polite"
+          aria-atomic="true"
+        >
+          {assistantAnnouncement}
+        </div>
         <header className={styles.chatHeader}>
           <div>
             <div className={styles.chatTitleLine}>
@@ -169,7 +192,7 @@ export function ChatFeature() {
           </div>
         </section>
 
-        <KnowledgeBaseSummary />
+        {knowledgeBaseSummary}
 
         <section className={styles.railSection} aria-labelledby="session-title">
           <div className={styles.railHeading}>

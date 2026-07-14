@@ -23,7 +23,7 @@
 
 ```text
 src/
-├── app/                    Configuration and future app-wide providers
+├── app/                    Configuration and app-wide Query provider
 ├── features/
 │   └── <feature>/
 │       ├── api/            Endpoint calls and runtime validation
@@ -50,7 +50,7 @@ src/
 - Route every HTTP call through `apiRequest`.
 - Keep `fetch`, timeout, JSON parsing, and error-envelope behavior out of visual
   components.
-- Give each endpoint an explicit runtime validator.
+- Give each endpoint an explicit feature-owned Zod schema.
 - Reject malformed success responses instead of rendering partial data.
 - Keep chat mutation retries intentional and user-triggered.
 - Preserve request cancellation on unmount and conversation reset.
@@ -60,7 +60,10 @@ src/
 ## React And State
 
 - Use function components and focused hooks.
-- Keep server-derived health and document state in their feature hooks.
+- Keep server-derived health and document state in TanStack Query through their
+  feature hooks.
+- Use a no-retry Query mutation for chat while keeping the transcript in local
+  React state.
 - Keep chat history as local presentation state.
 - Do not persist message content.
 - Use refs for request locks and DOM behavior that should not trigger rendering.
@@ -109,7 +112,25 @@ src/
 - Do not recommend medication or treatment.
 - Do not state that emergency services, a callback, an appointment, or a ticket
   were created unless backend action data confirms it.
-- Examples and future test fixtures must remain fictional and non-identifying.
+- Examples and test fixtures must remain fictional and non-identifying.
+
+## Testing And Quality
+
+The required gate is:
+
+```text
+npm run lint
+npm run format:check
+npm run typecheck
+npm run test:run
+npm run build
+```
+
+- Use Vitest, React Testing Library, and user-event for behavior tests.
+- Use MSW at the HTTP boundary; automated tests must not call the deployed API.
+- Prefer accessible roles, labels, and visible behavior over implementation
+  selectors or broad snapshots.
+- Reset MSW handlers and browser state between tests.
 
 ## Documentation
 
@@ -121,4 +142,4 @@ src/
   `.agent/context/aws.md`.
 - Test tooling changes require updates to `.agent/context/testing.md`, this file,
   and the quality-command section of `README.md`.
-- Keep current implementation status separate from roadmap ideas.
+- Keep current implementation status separate from roadmap and backlog ideas.

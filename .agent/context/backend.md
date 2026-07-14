@@ -9,7 +9,7 @@ errors, health behavior, document metadata, chat rendering, or CORS guidance.
 - Swagger: `https://api.albertlukmanovlabs.lol/docs`
 - Backend ownership: separate repository and deployment
 - Frontend request timeout: 25 seconds
-- Authoritative frontend contract: [../../../docs/api.md](../../../docs/api.md)
+- Authoritative frontend contract: [../../docs/api.md](../../docs/api.md)
 
 Do not add a backend, proxy, or mock production behavior to this repository.
 
@@ -21,8 +21,10 @@ Required string fields: `status`, `service`, and `version`.
 
 ### `GET /api/documents`
 
-Required fields: `documents[]` with `source` and `chunks`, plus
-`total_documents` and `total_chunks`.
+The deployed response may omit `documents`, `total_documents`, and
+`total_chunks`. The frontend defaults them to `[]`, `0`, and `0`. Present
+documents require `source` and `chunks`; present counts remain non-negative
+integers.
 
 ### `POST /api/chat`
 
@@ -32,10 +34,19 @@ Required response fields:
 
 - `message`
 - supported `classification`
-- `actions[]` with `tool`, `status`, and `result`
-- `requires_human`
-- `sources[]`
 - `trace_id`
+
+Backend-defaulted response fields:
+
+- omitted `actions` becomes `[]`;
+- omitted `requires_human` becomes `false`;
+- omitted `sources` becomes `[]`; and
+- an omitted action `result` becomes `null`.
+
+When present, each action requires `tool` and a strict `success`, `error`, or
+`skipped` status. A present `result` must be an object with arbitrary properties;
+arrays, scalars, and explicit `null` are rejected. Explicit malformed values are
+rejected.
 
 Supported classifications are `appointment_request`, `pricing_question`,
 `document_question`, `emergency_or_pain`, `complaint`, `general_question`, and
@@ -47,7 +58,8 @@ Supported classifications are `appointment_request`, `pricing_question`,
 - Keep validation in feature API modules.
 - Keep transport behavior in `src/shared/api/request.ts`.
 - Preserve typed `ApiError` metadata: status, code, trace ID, and kind.
-- Read safe error fields from the root or object-valued `detail` envelope.
+- Combine safe error fields from the root and object-valued `detail` envelope,
+  preferring nested values per field and retaining root fallbacks.
 - Preserve specific handling for `422`, `429`, `503`, `crm_unavailable`, generic
   `5xx`, invalid JSON, invalid schema, timeout, abort, and network errors.
 - Never show a failed appointment, callback, ticket, or escalation as successful.

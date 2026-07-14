@@ -13,25 +13,29 @@ verification criteria.
 - Classification, actions, sources, trace, and escalation presentation
 - Safety, accessibility, timeout, cancellation, retry, and responsive states
 - Maintainer and agent documentation
+- TanStack Query server-state ownership and Zod endpoint schemas
+- Vitest, React Testing Library, user-event, and MSW behavioral coverage
+- Formatting, lint, strict type-checking, tests, and production build commands
+- Pull-request and main-branch CI with a tested build artifact
+- A separate deployment workflow definition that has not been run or verified
 
-## Near-Term Quality
+## Quality Follow-Up
 
-1. Add Vitest and React Testing Library with MSW-backed API tests.
-2. Cover response validation, invalid JSON, timeout, abort, and safe error mapping.
-3. Cover chat submission, metadata rendering, escalation, duplicate prevention,
-   retry, and session reset.
-4. Add dedicated `typecheck`, `test:run`, `format`, and `format:check` scripts.
-5. Add CI for install, lint, formatting, type checking, tests, and build.
-6. Add automated accessibility checks for the primary workflow.
+- Add automated accessibility checks for the primary workflow.
+- Add browser-level regression coverage where unit and component tests are
+  insufficient.
 
 ## Deployment
 
-1. Add frontend-only Terraform for private S3, CloudFront OAC, ACM, Route 53, and
-   the constrained GitHub OIDC role.
-2. Validate infrastructure without automatic apply.
-3. Add artifact-based production deployment with scoped caching and invalidation.
-4. Add a production smoke test and deployment summary.
-5. Capture representative desktop and mobile screenshots after verified deploy.
+1. Add separately authorized frontend Terraform for private S3, CloudFront OAC,
+   ACM, Route 53, and a constrained GitHub OIDC role.
+2. Provision and verify AWS resources without automatic pull-request apply.
+3. Create and verify apex DNS records in the owning system.
+4. Update and verify the backend CORS allowlist in the backend repository.
+5. Configure the GitHub production environment, run the existing deployment
+   workflow, and verify the intended frontend URL.
+6. Capture representative fictional desktop and mobile screenshots after a
+   verified deployment.
 
 ## Product Enhancements
 

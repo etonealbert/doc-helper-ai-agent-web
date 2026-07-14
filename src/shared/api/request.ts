@@ -32,11 +32,15 @@ function parseErrorEnvelope(value: unknown): ErrorEnvelope {
   const detail =
     root.detail && typeof root.detail === 'object'
       ? (root.detail as Record<string, unknown>)
-      : root
+      : {}
 
   return {
-    message: readString(detail, 'message', 'error', 'detail'),
-    code: readString(detail, 'code', 'error_code'),
+    message:
+      readString(detail, 'message', 'error', 'detail') ??
+      readString(root, 'message', 'error', 'detail'),
+    code:
+      readString(detail, 'code', 'error_code') ??
+      readString(root, 'code', 'error_code'),
     traceId:
       readString(detail, 'trace_id', 'traceId') ??
       readString(root, 'trace_id', 'traceId'),
@@ -72,9 +76,18 @@ export async function apiRequest<T>(
 ): Promise<T> {
   const controller = new AbortController()
   const timeoutMs = options.timeoutMs ?? appConfig.requestTimeoutMs
-  const timeoutId = window.setTimeout(() => controller.abort('timeout'), timeoutMs)
+  let didTimeout = false
+  const timeoutId = window.setTimeout(() => {
+    if (controller.signal.aborted) return
+    didTimeout = true
+    controller.abort()
+  }, timeoutMs)
   const abortFromCaller = () => controller.abort(options.signal?.reason)
-  options.signal?.addEventListener('abort', abortFromCaller, { once: true })
+  if (options.signal?.aborted) {
+    controller.abort(options.signal.reason)
+  } else {
+    options.signal?.addEventListener('abort', abortFromCaller, { once: true })
+  }
 
   try {
     const response = await fetch(`${appConfig.apiBaseUrl}${path}`, {
@@ -90,13 +103,16 @@ export async function apiRequest<T>(
 
     if (!response.ok) {
       const envelope = parseErrorEnvelope(body)
-      throw new ApiError(envelope.message || `Request failed (${response.status}).`, {
-        status: response.status,
-        code: envelope.code,
-        traceId:
-          envelope.traceId ?? response.headers.get('X-Trace-Id') ?? undefined,
-        kind: errorKindForStatus(response.status),
-      })
+      throw new ApiError(
+        envelope.message || `Request failed (${response.status}).`,
+        {
+          status: response.status,
+          code: envelope.code,
+          traceId:
+            envelope.traceId ?? response.headers.get('X-Trace-Id') ?? undefined,
+          kind: errorKindForStatus(response.status),
+        },
+      )
     }
 
     try {
@@ -114,7 +130,7 @@ export async function apiRequest<T>(
     if (cause instanceof ApiError) throw cause
     if (controller.signal.aborted) {
       throw new ApiError('The request was aborted.', {
-        kind: controller.signal.reason === 'timeout' ? 'timeout' : 'network',
+        kind: didTimeout ? 'timeout' : 'network',
         cause,
       })
     }

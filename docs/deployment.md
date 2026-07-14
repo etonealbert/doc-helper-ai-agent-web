@@ -2,179 +2,149 @@
 
 ## Current State
 
-The repository currently contains the static frontend source only. It does not
-contain Terraform, GitHub Actions deployment workflows, or proof of a production
-deployment. The intended production URL is:
+The repository contains a Vite static frontend, a CI workflow, and a separate
+deployment workflow definition. It does not contain Terraform or proof that the
+required AWS resources, apex DNS records, or backend CORS allowlist exist. Neither
+workflow was run by this change, and no production deployment was performed or
+verified.
+
+Intended frontend URL (unverified):
 
 ```text
 https://albertlukmanovlabs.lol
 ```
 
-The existing backend remains independently deployed at:
+Independently deployed backend:
 
 ```text
 https://api.albertlukmanovlabs.lol
 ```
 
-Do not claim the frontend is deployed until the production URL is smoke-tested.
+Do not present the intended frontend URL as live until the owning infrastructure
+and external blockers are complete and the URL passes a production smoke test.
 
 ## Build Contract
 
-Vite reads public configuration at build time and writes the static site to
-`dist/`.
+Vite reads public configuration at build time and writes static assets to `dist/`.
 
-```bash
-VITE_API_BASE_URL=https://api.albertlukmanovlabs.lol npm run build
+```powershell
+$env:VITE_API_BASE_URL = "https://api.albertlukmanovlabs.lol"
+$env:VITE_APP_ENV = "production"
+npm run build
 ```
 
 Required production values:
 
-| Variable | Value |
-| --- | --- |
-| `VITE_API_BASE_URL` | `https://api.albertlukmanovlabs.lol` |
-| `VITE_APP_ENV` | `production` |
-| `VITE_GITHUB_REPOSITORY_URL` | Public project repository URL |
+| Variable                     | Value                                |
+| ---------------------------- | ------------------------------------ |
+| `VITE_API_BASE_URL`          | `https://api.albertlukmanovlabs.lol` |
+| `VITE_APP_ENV`               | `production`                         |
+| `VITE_GITHUB_REPOSITORY_URL` | Public project repository URL        |
 
 `VITE_` values are embedded in browser assets and must never contain secrets.
 
-## Target AWS Topology
+## Workflow Definitions
+
+`.github/workflows/ci.yml` runs for pull requests targeting `main` and pushes to
+`main`. It uses Node from `.nvmrc`, installs with `npm ci`, runs formatting, lint,
+type checking, tests, and the production build, then uploads `dist` as a
+commit-addressed artifact. It has no AWS credential or deployment step.
+
+`.github/workflows/deploy.yml` separately defines an artifact-based production
+release. Its quality job references the GitHub `production` environment so
+environment-scoped `VITE_API_BASE_URL` is available before the production bundle
+is built. Production environment protection therefore gates the build when
+configured. The dependent deployment job also references `production`, downloads
+that exact artifact, requests AWS credentials through GitHub OIDC, syncs files to
+S3 with scoped cache headers, invalidates only `/` and `/index.html`, waits for
+completion, and attempts a frontend smoke test. GitHub may require a separate
+environment approval when the deploy job becomes eligible after quality passes.
+Only the deploy job has `id-token: write`; the quality job has no OIDC permission.
+
+The deployment definition is not evidence of a deployment. It requires externally
+provisioned AWS resources and GitHub production-environment values, and it has not
+been run or verified by this change.
+
+## Intended AWS Topology
 
 ```mermaid
 flowchart TD
-    DNS[Route 53 apex A and AAAA aliases] --> CF[CloudFront distribution]
+    Browser[Browser] -->|HTTPS| DNS[Route 53 apex A and AAAA aliases]
+    DNS --> CF[CloudFront distribution]
     CF -->|Origin Access Control| S3[Private S3 REST origin]
-    Browser[Browser] -->|HTTPS| DNS
     Browser -->|HTTPS| API[Existing API domain]
 ```
 
-The desired infrastructure consists of:
+The intended topology uses a private S3 REST origin with Block Public Access,
+CloudFront Origin Access Control, an ACM certificate in `us-east-1`, and Route 53
+apex aliases. Public S3 website hosting is not part of the design.
 
-- the existing Route 53 hosted zone for `albertlukmanovlabs.lol`;
-- a private, encrypted, versioned S3 bucket with Block Public Access enabled;
-- CloudFront using Origin Access Control and the S3 REST endpoint;
-- an ACM certificate created in `us-east-1`;
-- Route 53 A and AAAA aliases for the apex domain;
-- optional A and AAAA aliases for `www`;
-- HTTP-to-HTTPS redirects, compression, HTTP/2, and HTTP/3 where supported;
-- security response headers;
-- `index.html` as the default root object;
-- SPA fallbacks mapping origin `403` and `404` to `/index.html` with status `200`.
+No Terraform exists in this repository, no AWS resources were provisioned or
+changed, and the intended topology has not been verified. Infrastructure work is
+tracked only as deferred work in [roadmap.md](roadmap.md) and
+[../.agent/tasks/backlog.md](../.agent/tasks/backlog.md).
 
-Public S3 website hosting is not part of the design.
+## Cache Contract
 
-## Terraform Contract
+The deployment workflow defines:
 
-If Terraform is added, it should live under `infra/terraform` and use the existing
-remote-state bucket with a frontend-specific key:
+- `dist/assets/*`: `public,max-age=31536000,immutable`
+- `index.html`: `no-cache,no-store,must-revalidate`
+- other public files: `public,max-age=300`
+- CloudFront invalidation paths: `/` and `/index.html`
 
-```hcl
-terraform {
-  backend "s3" {
-    bucket       = "albertlukmanovlabs-terraform-state-964866958896"
-    key          = "doc-helper-ai-agent-web/prod/terraform.tfstate"
-    region       = "us-east-1"
-    encrypt      = true
-    use_lockfile = true
-  }
-}
-```
+The production-environment quality and deployment jobs exchange the same
+commit-addressed artifact; the deployment job does not rebuild it.
 
-Expected outputs:
+## External Release Blockers
 
-- `frontend_bucket_name`
-- `cloudfront_distribution_id`
-- `cloudfront_distribution_domain`
-- `frontend_url`
-- `github_deploy_role_arn`
-- `certificate_arn`
+### Backend CORS
 
-Validation must include `terraform fmt -check -recursive`, initialization without
-the production backend for CI validation, and `terraform validate`. Infrastructure
-must never be applied automatically from pull-request CI.
-
-## Deployment Identity
-
-A future GitHub deployment workflow should use OIDC and a frontend-specific IAM
-role. The trust subject must be limited to:
-
-```text
-repo:etonealbert/doc-helper-ai-agent-web:environment:production
-```
-
-The role needs only:
-
-- frontend bucket listing and location lookup;
-- frontend object upload and stale-object deletion;
-- creation and inspection of invalidations for the one CloudFront distribution.
-
-It must not receive ECS, ECR, DynamoDB, Route 53, broad IAM, or backend deployment
-permissions. Long-lived AWS access keys must not be stored in GitHub.
-
-## Cache Policy
-
-Upload Vite fingerprinted assets under `dist/assets` with:
-
-```text
-Cache-Control: public,max-age=31536000,immutable
-```
-
-Upload `index.html` with:
-
-```text
-Cache-Control: no-cache,no-store,must-revalidate
-```
-
-Other non-fingerprinted files should use a short cache lifetime, such as five
-minutes. Invalidate only `/` and `/index.html` after deployment unless a wider
-invalidation has a documented reason.
-
-## Backend CORS Requirement
-
-Before browser integration can work in production, the backend allowlist must
-include:
+The separately owned backend must allow:
 
 ```text
 https://albertlukmanovlabs.lol
 https://www.albertlukmanovlabs.lol
 ```
 
-Local development may also include `http://localhost:5173`. Recommended behavior:
+Local development may additionally allow `http://localhost:5173`. Production
+guidance is `allow_credentials=false`, methods `GET`, `POST`, and `OPTIONS`, only
+required request headers, exposed `X-Trace-Id`, and no wildcard origins.
 
-- `allow_credentials=false`;
-- methods `GET`, `POST`, and `OPTIONS`;
-- only required request headers;
-- expose `X-Trace-Id`;
-- no wildcard production origins.
+This frontend work did not change or verify backend CORS.
 
-This change belongs in the backend repository, not here.
+### Apex DNS And AWS
 
-## Future GitHub Environment
+The apex DNS aliases and all required AWS resources must be created and verified
+in their owning systems. This frontend work did not create or inspect them.
 
-The protected `production` environment should define non-secret variables:
+### GitHub Environment
+
+The deployment workflow expects externally supplied production values including:
 
 ```text
 AWS_REGION=us-east-1
-AWS_ROLE_ARN=<terraform output>
-FRONTEND_BUCKET_NAME=<terraform output>
-CLOUDFRONT_DISTRIBUTION_ID=<terraform output>
+AWS_ROLE_ARN=<provisioned role ARN>
+FRONTEND_BUCKET_NAME=<provisioned bucket name>
+CLOUDFRONT_DISTRIBUTION_ID=<provisioned distribution ID>
 FRONTEND_URL=https://albertlukmanovlabs.lol
 VITE_API_BASE_URL=https://api.albertlukmanovlabs.lol
 ```
 
-## Release Verification
+Their presence, protection rules, approval behavior, and correctness were not
+verified. Environment-scoped build values are available only after the quality
+job's production-environment gate is satisfied.
 
-After infrastructure and workflow implementation, verify:
+## Production Verification
 
-1. The quality checks and production build complete successfully.
-2. The exact tested `dist/` artifact is uploaded.
-3. CloudFront serves the current `index.html` and fingerprinted assets.
-4. The header reports the API as online without browser CORS errors.
-5. Opening-hours and pricing prompts return grounded answers and sources.
-6. Appointment actions and safety escalation render accurately.
-7. Trace ID copying works.
-8. The 360px layout remains usable.
-9. Reloading a future client-side route returns the SPA shell rather than S3
-   `403` or `404` content.
+After separately authorized infrastructure, DNS, CORS, and deployment work, verify:
 
-AWS provisioning, workflow creation, commits, pushes, and backend CORS changes
-require explicit user authorization.
+1. The exact quality-tested `dist` artifact is deployed.
+2. HTTPS serves the current application shell and fingerprinted assets.
+3. The API status loads without browser CORS errors.
+4. Fictional opening-hours and pricing prompts return grounded answers and sources.
+5. Appointment actions and safety escalation render without claiming unconfirmed outcomes.
+6. Trace copying and the 360px layout remain usable.
+7. Reloading the frontend URL returns the application shell.
+
+Until those checks succeed, the frontend URL remains intended and unverified.

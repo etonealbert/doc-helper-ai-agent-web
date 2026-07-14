@@ -18,7 +18,11 @@ export function EscalationNotice({
     <div className={styles.escalationNotice} role="alert">
       <Icon name="warning" size={20} />
       <div>
-        <strong>{isUrgent ? 'Professional help may be needed' : 'Human review recommended'}</strong>
+        <strong>
+          {isUrgent
+            ? 'Professional help may be needed'
+            : 'Human review recommended'}
+        </strong>
         <p>
           {isUrgent
             ? 'This assistant cannot provide medical advice and has not contacted emergency services. For urgent or life-threatening situations, contact local emergency services or a qualified professional now.'

@@ -20,9 +20,10 @@ HTTP or HTTPS, and removes trailing slashes. API calls are centralized in
 }
 ```
 
-All three properties must be strings. `status: "ok"` maps to **online**; another
-valid status maps to **degraded**. A request or validation failure maps to
-**unavailable**. The UI checks immediately and then every 45 seconds.
+All three properties must be non-empty strings. `status: "ok"` maps to **online**;
+another valid status maps to **degraded**. A request or validation failure maps to
+**unavailable**. TanStack Query checks immediately, retries a failed query once,
+and then polls every 45 seconds.
 
 ## Documents
 
@@ -41,8 +42,12 @@ valid status maps to **degraded**. A request or validation failure maps to
 }
 ```
 
-Document sources must be strings and counts must be finite numbers. The first UI
-version displays metadata only; it does not upload, edit, or search documents.
+The deployed response may omit `documents`, `total_documents`, and `total_chunks`.
+The frontend defaults omitted documents to `[]` and either omitted total to `0`.
+When present, document sources must be non-empty strings and counts must be
+non-negative integers. TanStack Query owns cancellation, one automatic retry,
+and manual refetch. The UI displays metadata only; it does not upload, edit, or
+search documents.
 
 `POST /api/documents/search` exists on the backend but is not a primary UI route.
 
@@ -92,14 +97,32 @@ Supported classifications:
 - `general_question`
 - `human_escalation`
 
-The response validator rejects unsupported classifications or malformed fields.
-`action.result` remains unknown structured data and is sanitized before display.
-Arbitrary HTML is never rendered.
+The Zod schema requires `message`, `classification`, and `trace_id`. For parity
+with backend defaults, omitted `actions` and `sources` become empty arrays,
+omitted `requires_human` becomes `false`, and an omitted `action.result` becomes
+`null`. Explicit malformed values are still rejected.
+
+Supported action statuses are strictly `success`, `error`, and `skipped`.
+Unsupported classifications or statuses are rejected. When `action.result` is
+present, it must be an object with arbitrary properties; arrays, scalar values,
+and explicit `null` are rejected. An omitted result becomes frontend `null`.
+Result objects are sanitized before text display, and arbitrary HTML is never
+rendered.
+
+Chat executes through a TanStack Query mutation with automatic retry disabled.
+The mutation is invoked without variables, returns no response data, uses zero
+garbage-collection time, and is reset after each operation so message text,
+pseudonymous IDs, backend responses, and failures are not retained in
+MutationCache. `sendChat` failures are caught into an operation-owned ref and
+mapped to local safe UI state only after the void mutation resolves. The active
+request, response, failure, and transcript remain local to the chat hook.
 
 ## Error Contract
 
-The request layer safely accepts error metadata at the response root or in an
-object-valued `detail` property. Recognized fields include:
+The request layer safely combines error metadata from the response root and an
+object-valued `detail` property. For each recognized field, a nested value takes
+precedence and a root value supplies a fallback, so mixed envelopes retain all
+available metadata. Recognized fields include:
 
 ```json
 {
@@ -113,26 +136,28 @@ object-valued `detail` property. Recognized fields include:
 
 It also reads `X-Trace-Id` when a trace is not present in the body.
 
-| Condition | UI behavior |
-| --- | --- |
-| `422` | Explain that the request could not be processed |
-| `429` | Ask the user to wait before retrying |
+| Condition                 | UI behavior                                                    |
+| ------------------------- | -------------------------------------------------------------- |
+| `422`                     | Explain that the request could not be processed                |
+| `429`                     | Ask the user to wait before retrying                           |
 | `503` + `crm_unavailable` | State that scheduling is unavailable and nothing was confirmed |
-| Other `503` | Report a temporarily unavailable supporting service |
-| Other `5xx` | Report a generic server failure |
-| Invalid JSON or schema | Report an unexpected response |
-| Timeout | State that no action was confirmed and allow retry |
-| Network failure | Suggest checking connectivity and allow retry |
+| Other `503`               | Report a temporarily unavailable supporting service            |
+| Other `5xx`               | Report a generic server failure                                |
+| Invalid JSON or schema    | Report an unexpected response                                  |
+| Timeout                   | State that no action was confirmed and allow retry             |
+| Network failure           | Suggest checking connectivity and allow retry                  |
 
 Retries reuse the failed request without adding a duplicate user bubble. Mutations
 do not retry automatically.
 
 ## Cancellation
 
-Each request gets an internal `AbortController`. A caller-provided signal is
-forwarded to that controller. Chat requests are aborted when the chat hook unmounts
-or the conversation is cleared. Health and document requests are aborted when
-their hooks unmount.
+Each request gets an internal `AbortController` and a 25-second timeout. A
+caller-provided signal, including one already aborted, is forwarded to that
+controller. Timeout is distinguished from caller cancellation. Chat requests are
+aborted when the chat hook unmounts or the conversation is cleared. Health and
+document requests consume TanStack Query's signal, including cancellation on
+unmount.
 
 ## CORS
 
@@ -152,4 +177,6 @@ backend settings are:
 - exposed response header `X-Trace-Id`
 - no wildcard production origins
 
-CORS is a backend responsibility and must not be bypassed in this frontend.
+CORS is a backend responsibility and must not be bypassed in this frontend. The
+required production allowlist has not been changed or verified by this frontend
+work and remains an external release blocker.

@@ -1,8 +1,9 @@
+import { useMutation } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
 import { ApiError, getSafeErrorMessage } from '../../../shared/api/ApiError'
 import { usePersistentSession } from '../../../shared/hooks/usePersistentSession'
 import { sendChat } from '../api/chatApi'
-import type { ConversationMessage } from '../model/types'
+import type { ChatResponse, ConversationMessage } from '../model/types'
 
 const welcomeMessage: ConversationMessage = {
   id: 'welcome',
@@ -18,17 +19,77 @@ interface ChatErrorState {
   failedMessage: string
 }
 
+interface ChatOperation {
+  message: string
+  userId: string
+  sessionId: string
+  controller: AbortController
+}
+
+interface ChatOperationResponse {
+  operation: ChatOperation
+  response: ChatResponse
+}
+
+interface ChatOperationFailure {
+  operation: ChatOperation
+  cause: unknown
+}
+
+function readOperationValue<T>(operationRef: { current: T | null }) {
+  return operationRef.current
+}
+
 export function useChat() {
   const [messages, setMessages] = useState<ConversationMessage[]>([
     welcomeMessage,
   ])
-  const [isPending, setIsPending] = useState(false)
   const [error, setError] = useState<ChatErrorState | null>(null)
-  const activeRequest = useRef<AbortController | null>(null)
+  const activeRequest = useRef<ChatOperation | null>(null)
+  const activeResponse = useRef<ChatOperationResponse | null>(null)
+  const activeFailure = useRef<ChatOperationFailure | null>(null)
   const pendingRequest = useRef(false)
   const { sessionId, userId, resetSession } = usePersistentSession()
+  const mutation = useMutation({
+    mutationFn: async () => {
+      const operation = activeRequest.current
+      if (!operation) return
 
-  useEffect(() => () => activeRequest.current?.abort(), [])
+      try {
+        const response = await sendChat({
+          message: operation.message,
+          userId: operation.userId,
+          sessionId: operation.sessionId,
+          signal: operation.controller.signal,
+        })
+        if (
+          activeRequest.current === operation &&
+          !operation.controller.signal.aborted
+        ) {
+          activeResponse.current = { operation, response }
+        }
+      } catch (cause) {
+        if (activeRequest.current === operation) {
+          activeFailure.current = { operation, cause }
+        }
+      }
+    },
+    retry: false,
+    gcTime: 0,
+  })
+  const resetMutation = mutation.reset
+
+  useEffect(
+    () => () => {
+      activeRequest.current?.controller.abort()
+      activeRequest.current = null
+      activeResponse.current = null
+      activeFailure.current = null
+      pendingRequest.current = false
+      resetMutation()
+    },
+    [resetMutation],
+  )
 
   const execute = async (rawMessage: string, appendUserMessage: boolean) => {
     const message = rawMessage.trim()
@@ -44,30 +105,41 @@ export function useChat() {
     }
     setError(null)
     pendingRequest.current = true
-    setIsPending(true)
 
-    const controller = new AbortController()
-    activeRequest.current = controller
+    const operation: ChatOperation = {
+      message,
+      userId,
+      sessionId,
+      controller: new AbortController(),
+    }
+    activeRequest.current = operation
+    activeResponse.current = null
+    activeFailure.current = null
 
     try {
-      const response = await sendChat({
-        message,
-        userId,
-        sessionId,
-        signal: controller.signal,
-      })
+      await mutation.mutateAsync()
+      const failed = readOperationValue(activeFailure)
+      if (failed?.operation === operation) throw failed.cause
+
+      const completed = readOperationValue(activeResponse)
+      if (
+        completed?.operation !== operation ||
+        operation.controller.signal.aborted
+      ) {
+        return false
+      }
       setMessages((current) => [
         ...current,
         {
           id: crypto.randomUUID(),
           role: 'assistant',
-          content: response.message,
-          response,
+          content: completed.response.message,
+          response: completed.response,
         },
       ])
       return true
     } catch (cause) {
-      if (!controller.signal.aborted) {
+      if (!operation.controller.signal.aborted) {
         setError({
           message: getSafeErrorMessage(cause),
           traceId: cause instanceof ApiError ? cause.traceId : undefined,
@@ -76,10 +148,12 @@ export function useChat() {
       }
       return false
     } finally {
-      if (activeRequest.current === controller) {
+      if (activeRequest.current === operation) {
         activeRequest.current = null
+        activeResponse.current = null
+        activeFailure.current = null
         pendingRequest.current = false
-        setIsPending(false)
+        resetMutation()
       }
     }
   }
@@ -87,18 +161,20 @@ export function useChat() {
   const submit = (message: string) => execute(message, true)
 
   const clear = () => {
-    activeRequest.current?.abort()
+    activeRequest.current?.controller.abort()
     activeRequest.current = null
+    activeResponse.current = null
+    activeFailure.current = null
     pendingRequest.current = false
     setMessages([welcomeMessage])
     setError(null)
-    setIsPending(false)
+    resetMutation()
     resetSession()
   }
 
   return {
     messages,
-    isPending,
+    isPending: mutation.isPending,
     error,
     sessionId,
     submit,

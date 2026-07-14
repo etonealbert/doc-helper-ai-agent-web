@@ -1,5 +1,6 @@
 import { appConfig } from './app/config'
 import { ChatFeature } from './features/chat/ChatFeature'
+import { KnowledgeBaseSummary } from './features/documents/components/KnowledgeBaseSummary'
 import { HealthIndicator } from './features/health/components/HealthIndicator'
 import { useHealth } from './features/health/hooks/useHealth'
 import { Icon } from './shared/components/Icon'
@@ -12,7 +13,11 @@ function App() {
     <div className={styles.appShell}>
       <header className={styles.topBar}>
         <div className={styles.topBarInner}>
-          <a className={styles.brand} href="#main-content" aria-label="Doc Helper AI Agent home">
+          <a
+            className={styles.brand}
+            href="#main-content"
+            aria-label="Doc Helper AI Agent home"
+          >
             <span className={styles.brandMark}>
               <Icon name="document" size={22} />
               <span aria-hidden="true" />
@@ -48,18 +53,21 @@ function App() {
       </header>
 
       <main className={styles.mainContent} id="main-content">
-        <section className={styles.disclaimer} aria-label="Demonstration disclaimer">
+        <section
+          className={styles.disclaimer}
+          aria-label="Demonstration disclaimer"
+        >
           <span className={styles.disclaimerIcon}>
             <Icon name="shield" size={18} />
           </span>
           <p>
-            <strong>Demonstration environment.</strong> No diagnosis or treatment
-            is provided. Do not enter real patient data. For urgent or
+            <strong>Demonstration environment.</strong> No diagnosis or
+            treatment is provided. Do not enter real patient data. For urgent or
             life-threatening situations, contact local emergency services or a
             qualified professional.
           </p>
         </section>
-        <ChatFeature />
+        <ChatFeature knowledgeBaseSummary={<KnowledgeBaseSummary />} />
       </main>
 
       <footer className={styles.footer}>

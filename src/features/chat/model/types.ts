@@ -10,10 +10,13 @@ export const classifications = [
 
 export type Classification = (typeof classifications)[number]
 
+export const toolStatuses = ['success', 'error', 'skipped'] as const
+export type ToolStatus = (typeof toolStatuses)[number]
+
 export interface ToolAction {
   tool: string
-  status: string
-  result: unknown
+  status: ToolStatus
+  result: Record<string, unknown> | null
 }
 
 export interface ChatResponse {

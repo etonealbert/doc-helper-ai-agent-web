@@ -3,13 +3,15 @@
 Load this context before adding or reviewing infrastructure, CI deployment, DNS,
 certificates, caching, IAM, or production smoke tests.
 
-Detailed deployment contract: [../../../docs/deployment.md](../../../docs/deployment.md)
+Detailed deployment contract: [../../docs/deployment.md](../../docs/deployment.md)
 
 ## Current Boundary
 
-No Terraform or AWS deployment workflow currently exists in this repository. No
-AWS resources have been created or changed by the frontend implementation. Do not
-provision, apply, commit, push, or edit the backend without explicit authorization.
+No Terraform exists in this repository. A deployment workflow definition is
+present, but it depends on externally provisioned resources and environment values
+and has not been run or production-verified by this change. No AWS resources have
+been created or changed by the frontend implementation. Do not provision, apply,
+deploy, commit, push, or edit the backend without explicit authorization.
 
 ## Target Topology
 
@@ -67,6 +69,12 @@ permissions. Do not store long-lived access keys.
 
 Deploy the exact artifact that passed quality checks and wait for invalidation
 completion before smoke testing.
+
+Both deployment-workflow jobs reference the GitHub `production` environment.
+Environment protection can therefore require approval before the quality job
+builds with environment-scoped `VITE_API_BASE_URL`, and again when the dependent
+deploy job becomes eligible. Only the deploy job grants `id-token: write`; the
+quality/build job remains without OIDC permission.
 
 ## Required Backend Coordination
 

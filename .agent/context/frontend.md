@@ -3,24 +3,25 @@
 Load this context when changing React components, feature state, styling,
 responsive behavior, accessibility, storage, or shared frontend utilities.
 
-Full architecture: [../../../docs/architecture.md](../../../docs/architecture.md)
+Full architecture: [../../docs/architecture.md](../../docs/architecture.md)
 
 ## Stack
 
 - React 19 and React DOM
+- TanStack Query for cancellable server state
+- Zod for endpoint response validation
 - Vite and strict TypeScript
 - Native `fetch` and `AbortController`
-- Local runtime validation
 - CSS Modules plus global design tokens
 - No router, state manager, component framework, or CSS framework
 
 ## Ownership
 
-- `src/app`: validated runtime configuration
-- `src/features/chat`: conversation state, mutation, composer, answer metadata
-- `src/features/health`: status request and 45-second polling
-- `src/features/documents`: knowledge-base metadata request and display
-- `src/shared/api`: transport, validation primitives, and safe errors
+- `src/app`: validated runtime configuration and the Query provider
+- `src/features/chat`: local conversation state, Query mutation, composer, answer metadata
+- `src/features/health`: Query-backed status request and 45-second polling
+- `src/features/documents`: Query-backed knowledge-base metadata and display
+- `src/shared/api`: transport and safe errors
 - `src/shared/components`: cross-feature visual primitives
 - `src/shared/hooks`: browser-persistence behavior
 - `src/shared/lib`: pure formatting and redaction utilities
@@ -28,17 +29,33 @@ Full architecture: [../../../docs/architecture.md](../../../docs/architecture.md
 
 Features may depend on `shared`. Shared modules must not depend on features, and
 one feature should not import another feature's internal hook or API module.
+Cross-feature composition belongs in `App.tsx`; it injects the documents summary
+into `ChatFeature`.
 
 ## State
 
 - Chat messages and draft: memory only
 - Session ID: `localStorage`
 - Pseudonymous user ID: memory; regenerated on page load
-- Health and documents: local feature-hook state
+- Health and documents: in-memory Query cache exposed through feature hooks
+- Chat request lifecycle: payload/failure-free, no-retry, zero-retention Query mutation in `useChat`
 - Active request locks and scroll stickiness: refs
 
 Clearing chat aborts the active request, resets visible state, and rotates the
 session ID. Do not persist message content.
+
+## API Boundaries
+
+- Every consumed endpoint has a feature-owned Zod schema.
+- Chat defaults omitted `actions` and `sources` to empty arrays,
+  `requires_human` to `false`, and omitted action `result` to `null`.
+- Present action results must be record objects; arrays, scalars, and explicit
+  `null` are invalid.
+- Documents default omitted `documents` to `[]` and omitted totals to `0`.
+- Classifications and tool statuses remain strict enums.
+- `apiRequest` combines safe root and nested error metadata, applies the timeout,
+  and forwards caller cancellation.
+- Components do not receive unvalidated network data.
 
 ## Components
 
@@ -63,7 +80,10 @@ session ID. Do not persist message content.
 ## Accessibility
 
 - Use accessible names for inputs and controls.
-- Keep live announcements for asynchronous and copy states.
+- Keep the assistant completion live region mounted from initial render and
+  clear it while pending or while the current request has an error before updating
+  it with completed non-welcome answers; keep pending and copy status
+  announcements distinct.
 - Preserve semantic landmarks and heading order.
 - Keep tool disclosures keyboard-operable with native `details/summary`.
 - Do not rely on color alone for health, classification, or errors.

@@ -13,7 +13,7 @@ function normalizeUrl(value: string): string {
     return url.toString().replace(/\/$/, '')
   } catch (error) {
     const reason = error instanceof Error ? error.message : 'Unknown error'
-    throw new Error(`Invalid VITE_API_BASE_URL: ${reason}`)
+    throw new Error(`Invalid VITE_API_BASE_URL: ${reason}`, { cause: error })
   }
 }
 

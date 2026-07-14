@@ -5,81 +5,14 @@ introducing test dependencies, or updating CI and quality commands.
 
 ## Current State
 
-There is no automated test suite yet. Available scripts are:
+The repository uses Vitest in jsdom with React Testing Library,
+`@testing-library/user-event`, `@testing-library/jest-dom`, and MSW. The current
+suite contains API, request-layer, configuration, formatter, Query configuration,
+and component behavior tests.
 
-```bash
-npm run lint
-npm run build
-```
+The required quality gate is:
 
-`npm run build` includes TypeScript compilation. Do not run or document
-`test:run`, `format:check`, or standalone `typecheck` as available until those
-scripts exist in `package.json`.
-
-## Target Tooling
-
-When test tooling is authorized, use:
-
-- Vitest
-- React Testing Library
-- `@testing-library/user-event`
-- MSW for network behavior
-
-Tests must not call the deployed API. Use realistic, fictional fixtures with no
-patient or identifying data.
-
-## API Coverage
-
-Cover at minimum:
-
-- valid health response;
-- malformed health response;
-- valid documents response;
-- valid chat response and all displayed metadata;
-- backend error conversion to `ApiError`;
-- root and nested error envelopes;
-- invalid JSON and invalid success schema;
-- timeout and caller abort;
-- network failure;
-- `422`, `429`, `503`, `crm_unavailable`, and generic `5xx` mapping.
-
-## UI Coverage
-
-Cover at minimum:
-
-- sending a message and rendering the assistant answer;
-- classification, tools, sources, and trace ID;
-- emergency and human-escalation warnings;
-- duplicate-submission prevention;
-- pending announcement and disabled state;
-- safe CRM-unavailable and network errors;
-- retry without a duplicate user message;
-- clear conversation rotating the session;
-- starter prompt populating without automatic submission;
-- Enter and Shift+Enter behavior;
-- online and unavailable health states;
-- document loading, error, retry, and success states;
-- keyboard operation of tool disclosure and trace-copy controls.
-
-## Accessibility Expectations
-
-Assert accessible names and roles rather than implementation selectors. Prefer
-queries by role, label, and visible text. Test live status updates, native details
-keyboard behavior, focusable controls, and warning semantics.
-
-## Test Boundaries
-
-- Keep pure validator and formatter tests fast and isolated.
-- Use MSW at the network boundary rather than mocking `fetch` in component tests.
-- Reset handlers, storage, clipboard stubs, and fake timers after each test.
-- Keep fixtures in a shared test module once test infrastructure exists.
-- Avoid snapshots for dynamic workflow output; assert behavior and key content.
-
-## Future Quality Gate
-
-The target full gate is:
-
-```bash
+```text
 npm run lint
 npm run format:check
 npm run typecheck
@@ -87,8 +20,63 @@ npm run test:run
 npm run build
 ```
 
-Only make this required in README, AGENTS, or CI after every script is implemented
-and passing. Record unrun or unavailable checks honestly.
+`npm run build` includes TypeScript compilation. CI runs the same five commands
+after `npm ci` and uploads the resulting `dist` artifact.
+
+## Test Isolation
+
+- Tests must never call the deployed API.
+- `src/test/server.ts` creates the MSW Node server.
+- `src/test/setup.ts` starts it with `onUnhandledRequest: 'error'`.
+- `src/test/handlers.ts` supplies default health, documents, and chat handlers.
+- Shared fixtures are fictional, non-identifying demonstration data.
+- Global setup resets MSW handlers and `localStorage` after each test.
+- Use per-test MSW handlers for errors, delays, malformed payloads, and aborts.
+
+## Current Coverage
+
+API and request coverage includes:
+
+- valid and malformed health responses;
+- document key conversion and non-negative integer validation;
+- empty document-response defaults;
+- chat metadata conversion and omitted backend defaults;
+- object-only present action results and rejection of arrays, scalars, and null;
+- strict classifications and action statuses;
+- mixed root and nested error metadata;
+- safe `422`, `429`, generic `5xx`, invalid JSON, timeout, and caller abort behavior;
+- Query retry and stale-time defaults; and
+- configuration error cause retention.
+
+UI and utility coverage includes:
+
+- complete chat response rendering and persistent live announcement, including
+  identical consecutive answers and failed follow-up requests;
+- payload/failure-free, zero-retention mutation behavior and duplicate-submission prevention;
+- CRM-unavailable and network error safety language;
+- retry without a duplicate user message;
+- emergency response preservation and professional-help warning;
+- starter prompts, Enter, and Shift+Enter behavior;
+- clear, abort, transcript reset, and session rotation;
+- health display, cancellation, and 45-second polling;
+- document retry and cancellation; and
+- recursive structured-result redaction.
+
+## Testing Conventions
+
+- Assert accessible names, roles, and visible behavior rather than implementation
+  selectors.
+- Use MSW at the network boundary rather than mocking `fetch` in component tests.
+- Keep pure schema and formatter tests fast and isolated.
+- Restore handlers, storage, clipboard stubs, mocks, and fake timers after use.
+- Avoid snapshots for dynamic workflow output; assert key behavior and content.
+- Add regression coverage with every bug fix or behavior change.
+
+## Remaining Gaps
+
+Automated browser-level accessibility, end-to-end deployment, and visual
+regression checks are not part of the current suite. Keep these in the roadmap or
+backlog rather than describing them as implemented.
 
 When tooling changes, update this file, `README.md`, `AGENTS.md`,
-`docs/conventions.md`, and future CI workflows together.
+`docs/conventions.md`, and CI workflow documentation together.
