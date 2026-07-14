@@ -18,6 +18,10 @@ verification criteria.
 - Formatting, lint, strict type-checking, tests, and production build commands
 - Pull-request and main-branch CI with a tested build artifact
 - A separate deployment workflow definition that has not been run or verified
+- Frontend-only Terraform definitions, create-only plan audit, fictional audit
+  fixtures, and a backendless validation workflow definition
+- Provisioned and infrastructure-verified private S3, CloudFront OAC, ACM,
+  Route 53 apex/`www` aliases, and constrained GitHub OIDC deployment role
 
 ## Quality Follow-Up
 
@@ -27,14 +31,11 @@ verification criteria.
 
 ## Deployment
 
-1. Add separately authorized frontend Terraform for private S3, CloudFront OAC,
-   ACM, Route 53, and a constrained GitHub OIDC role.
-2. Provision and verify AWS resources without automatic pull-request apply.
-3. Create and verify apex DNS records in the owning system.
-4. Update and verify the backend CORS allowlist in the backend repository.
-5. Configure the GitHub production environment, run the existing deployment
+1. Update and verify the backend CORS allowlist in the backend repository.
+2. Configure the GitHub production environment from successful Terraform outputs,
+   run the existing deployment
    workflow, and verify the intended frontend URL.
-6. Capture representative fictional desktop and mobile screenshots after a
+3. Capture representative fictional desktop and mobile screenshots after a
    verified deployment.
 
 ## Product Enhancements

@@ -1,0 +1,10 @@
+{
+  "resource_changes": [
+    {
+      "address": "aws_s3_bucket.frontend",
+      "mode": "managed",
+      "type": 123,
+      "change": { "actions": ["create"] }
+    }
+  ]
+}

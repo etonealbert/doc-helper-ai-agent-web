@@ -5,10 +5,6 @@ scope, authorization, and verification.
 
 ## Infrastructure And Release
 
-- Add and validate frontend-only Terraform.
-- Provision the private S3, CloudFront OAC, ACM, Route 53, and constrained GitHub
-  OIDC resources.
-- Create and verify apex DNS records in the owning system.
 - Update and verify the backend CORS allowlist in the backend repository.
 - Configure the GitHub production environment and authorize the existing
   deployment workflow.

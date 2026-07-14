@@ -1,0 +1,10 @@
+{
+  "resource_changes": [
+    {
+      "address": "aws_lambda_function.unexpected",
+      "mode": "managed",
+      "type": "aws_lambda_function",
+      "change": { "actions": ["create"] }
+    }
+  ]
+}

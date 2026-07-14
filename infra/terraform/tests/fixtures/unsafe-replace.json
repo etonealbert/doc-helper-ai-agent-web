@@ -1,0 +1,10 @@
+{
+  "resource_changes": [
+    {
+      "address": "aws_cloudfront_distribution.frontend",
+      "mode": "managed",
+      "type": "aws_cloudfront_distribution",
+      "change": { "actions": ["delete", "create"] }
+    }
+  ]
+}

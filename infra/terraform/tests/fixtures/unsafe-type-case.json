@@ -1,0 +1,10 @@
+{
+  "resource_changes": [
+    {
+      "address": "aws_s3_bucket.frontend",
+      "mode": "managed",
+      "type": "AWS_S3_BUCKET",
+      "change": { "actions": ["create"] }
+    }
+  ]
+}

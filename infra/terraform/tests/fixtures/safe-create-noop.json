@@ -1,0 +1,101 @@
+{
+  "format_version": "1.2",
+  "resource_changes": [
+    {
+      "address": "data.aws_secretsmanager_secret.ignored",
+      "mode": "data",
+      "type": "aws_secretsmanager_secret",
+      "change": { "actions": ["read"] }
+    },
+    {
+      "address": "aws_s3_bucket.frontend",
+      "mode": "managed",
+      "type": "aws_s3_bucket",
+      "change": { "actions": ["create"] }
+    },
+    {
+      "address": "aws_s3_bucket_public_access_block.frontend",
+      "mode": "managed",
+      "type": "aws_s3_bucket_public_access_block",
+      "change": { "actions": ["no-op"] }
+    },
+    {
+      "address": "aws_s3_bucket_ownership_controls.frontend",
+      "mode": "managed",
+      "type": "aws_s3_bucket_ownership_controls",
+      "change": { "actions": ["create"] }
+    },
+    {
+      "address": "aws_s3_bucket_server_side_encryption_configuration.frontend",
+      "mode": "managed",
+      "type": "aws_s3_bucket_server_side_encryption_configuration",
+      "change": { "actions": ["no-op"] }
+    },
+    {
+      "address": "aws_s3_bucket_versioning.frontend",
+      "mode": "managed",
+      "type": "aws_s3_bucket_versioning",
+      "change": { "actions": ["create"] }
+    },
+    {
+      "address": "aws_s3_bucket_policy.frontend",
+      "mode": "managed",
+      "type": "aws_s3_bucket_policy",
+      "change": { "actions": ["no-op"] }
+    },
+    {
+      "address": "aws_acm_certificate.frontend",
+      "mode": "managed",
+      "type": "aws_acm_certificate",
+      "change": { "actions": ["create"] }
+    },
+    {
+      "address": "aws_acm_certificate_validation.frontend",
+      "mode": "managed",
+      "type": "aws_acm_certificate_validation",
+      "change": { "actions": ["no-op"] }
+    },
+    {
+      "address": "aws_route53_record.frontend_a",
+      "mode": "managed",
+      "type": "aws_route53_record",
+      "change": { "actions": ["create"] }
+    },
+    {
+      "address": "aws_cloudfront_origin_access_control.frontend",
+      "mode": "managed",
+      "type": "aws_cloudfront_origin_access_control",
+      "change": { "actions": ["no-op"] }
+    },
+    {
+      "address": "aws_cloudfront_cache_policy.frontend",
+      "mode": "managed",
+      "type": "aws_cloudfront_cache_policy",
+      "change": { "actions": ["create"] }
+    },
+    {
+      "address": "aws_cloudfront_response_headers_policy.frontend",
+      "mode": "managed",
+      "type": "aws_cloudfront_response_headers_policy",
+      "change": { "actions": ["no-op"] }
+    },
+    {
+      "address": "aws_cloudfront_distribution.frontend",
+      "mode": "managed",
+      "type": "aws_cloudfront_distribution",
+      "change": { "actions": ["create"] }
+    },
+    {
+      "address": "aws_iam_role.github_deploy",
+      "mode": "managed",
+      "type": "aws_iam_role",
+      "change": { "actions": ["create"] }
+    },
+    {
+      "address": "aws_iam_role_policy.github_deploy",
+      "mode": "managed",
+      "type": "aws_iam_role_policy",
+      "change": { "actions": ["no-op"] }
+    }
+  ]
+}

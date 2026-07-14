@@ -1,0 +1,10 @@
+{
+  "resource_changes": [
+    {
+      "address": null,
+      "mode": "managed",
+      "type": "aws_s3_bucket",
+      "change": { "actions": ["create"] }
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "resource_changes": [
+    {
+      "address": "data.aws_caller_identity.current",
+      "mode": "DATA",
+      "type": "aws_caller_identity",
+      "change": { "actions": ["read"] }
+    }
+  ]
+}

@@ -14,14 +14,14 @@ state, and trace IDs so the workflow remains inspectable.
 - Frontend application and local quality gate: implemented
 - Production API: `https://api.albertlukmanovlabs.lol`
 - API documentation: <https://api.albertlukmanovlabs.lol/docs>
-- Intended frontend URL: `https://albertlukmanovlabs.lol` (not deployment-verified)
+- Frontend infrastructure URL: `https://albertlukmanovlabs.lol` (assets not deployed)
 - CI and deployment workflow definitions: present but not run by this change
-- Terraform and AWS provisioning: not present
-- Apex DNS and backend CORS changes: external blockers
+- Frontend Terraform: applied and infrastructure-verified on 2026-07-14
+- Backend CORS, GitHub environment setup, and asset deployment: remaining work
 
-The intended frontend URL is a target, not evidence that this working tree has
-been deployed. No AWS resource, DNS record, or backend CORS setting was changed or
-verified as part of the frontend work.
+The AWS origin, CDN, certificate, DNS aliases, and deployment role are provisioned,
+but this working tree has not been deployed. The empty origin currently returns an
+expected CloudFront `403`; backend CORS was not changed or verified.
 
 ## Implemented Features
 
@@ -168,6 +168,7 @@ Responses remain `unknown` until their endpoint Zod schema succeeds. See
 |-- .agent/                    Focused context and task tracking
 |-- .github/workflows/         CI and deployment workflow definitions
 |-- docs/                      Maintainer documentation
+|-- infra/terraform/           Frontend AWS definitions and validation tooling
 |-- public/                    Static browser assets
 `-- src/
     |-- app/                   Configuration and application providers
@@ -187,16 +188,17 @@ flowchart TD
     User -->|HTTPS API requests| API[api.albertlukmanovlabs.lol]
 ```
 
-The intended design uses a private S3 origin behind CloudFront OAC, Route 53 apex
-aliases, and an ACM certificate in `us-east-1`. No Terraform is present and no AWS
-resources were provisioned or verified. Production browser integration also
-requires the separately owned backend CORS allowlist and apex DNS records. See
+The provisioned design uses a private S3 origin behind CloudFront OAC, Route 53
+apex and `www` aliases, and an ACM certificate in `us-east-1`. The Terraform stack
+was applied and verified on 2026-07-14. Production browser integration still
+requires frontend asset deployment, GitHub environment configuration, and the
+separately owned backend CORS allowlist. See
 [docs/deployment.md](docs/deployment.md).
 
 ## Known Limitations
 
-- The frontend URL and production workflow have not been deployment-verified.
-- AWS infrastructure, apex DNS, and backend CORS remain external work.
+- The frontend assets and production workflow have not been deployment-verified.
+- GitHub environment configuration and backend CORS remain external work.
 - No authentication or user accounts
 - No persisted chat history
 - No streaming responses

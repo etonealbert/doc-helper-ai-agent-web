@@ -80,12 +80,14 @@ The full contract and CORS assumptions are in:
 
 ## AWS Boundary
 
-No Terraform or provisioned AWS infrastructure exists in this repository. A
-deployment workflow definition is present but has not been run or
-production-verified by this change. The intended design is a private S3 origin
-behind CloudFront OAC, Route 53 aliases, and an ACM certificate in `us-east-1`.
-Apex DNS and backend CORS remain external blockers. Do not run Terraform, deploy,
-make AWS changes, commit, or push unless the user explicitly authorizes it. Read
+Frontend-only Terraform, a fail-closed create-only plan audit, and a backendless
+validation workflow exist under `infra/terraform`. The private S3 origin,
+CloudFront OAC, Route 53 apex/`www` aliases, ACM certificate in `us-east-1`, and
+GitHub deployment role were provisioned and infrastructure-verified on 2026-07-14.
+Frontend assets have not been deployed; GitHub environment setup, backend CORS,
+and production verification remain outstanding. Do not run further AWS-backed
+Terraform operations, deploy, make AWS changes, commit, or push unless the user
+explicitly authorizes it. Read
 [.agent/context/aws.md](.agent/context/aws.md) first.
 
 ## Authoritative Files
@@ -98,6 +100,7 @@ make AWS changes, commit, or push unless the user explicitly authorizes it. Read
 - Product composition: `src/App.tsx` and `src/features/chat/ChatFeature.tsx`
 - Visual tokens and layout: `src/styles/tokens.css` and
   `src/styles/ui.module.css`
+- Frontend infrastructure and runbook: `infra/terraform/`
 - Human documentation: `docs/`
 - Current work: `.agent/tasks/current.md`
 - Deferred work: `.agent/tasks/backlog.md`

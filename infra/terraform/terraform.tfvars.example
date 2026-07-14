@@ -1,0 +1,5 @@
+aws_region               = "us-east-1"
+domain_name              = "albertlukmanovlabs.lol"
+include_www              = true
+github_oidc_provider_arn = "arn:aws:iam::964866958896:oidc-provider/token.actions.githubusercontent.com"
+github_repository        = "etonealbert/doc-helper-ai-agent-web"

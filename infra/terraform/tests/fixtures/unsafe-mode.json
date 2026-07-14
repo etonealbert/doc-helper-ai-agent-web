@@ -1,0 +1,10 @@
+{
+  "resource_changes": [
+    {
+      "address": "ephemeral.random_password.unexpected",
+      "mode": "ephemeral",
+      "type": "random_password",
+      "change": { "actions": ["create"] }
+    }
+  ]
+}

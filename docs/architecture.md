@@ -146,9 +146,13 @@ unless a real maintenance or behavior need outweighs the added surface area.
 
 ## Deployment Boundary
 
-Vite produces static assets in `dist/`. CI and deployment workflow definitions are
-present, but no Terraform or provisioned AWS infrastructure is included and this
-working tree has not been deployed or production-verified. The intended topology
-is CloudFront in front of a private S3 REST origin while the browser calls the
-existing API over HTTPS. Apex DNS and backend CORS remain external blockers. See
-[deployment.md](deployment.md) for the target topology and operational contract.
+Vite produces static assets in `dist/`. Frontend CI, deployment, and backendless
+Terraform validation workflow definitions are present. Frontend-only Terraform
+under `infra/terraform` owns the CloudFront, private S3 REST origin, ACM, Route 53,
+and deployment-IAM topology. That stack and its apex/`www` DNS aliases were applied
+and infrastructure-verified on 2026-07-14. Frontend assets have not been deployed,
+and the browser continues to call the independently owned API over HTTPS. GitHub
+environment setup, deployment, and backend CORS remain release blockers. See
+[deployment.md](deployment.md) and
+[`infra/terraform/README.md`](../infra/terraform/README.md) for operational
+boundaries.

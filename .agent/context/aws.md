@@ -7,10 +7,13 @@ Detailed deployment contract: [../../docs/deployment.md](../../docs/deployment.m
 
 ## Current Boundary
 
-No Terraform exists in this repository. A deployment workflow definition is
-present, but it depends on externally provisioned resources and environment values
-and has not been run or production-verified by this change. No AWS resources have
-been created or changed by the frontend implementation. Do not provision, apply,
+Frontend-only Terraform exists under `infra/terraform`, together with a
+backendless validation workflow and a create-only plan-audit script. The
+configuration was applied and infrastructure-verified in AWS account
+`964866958896` on 2026-07-14. It provisioned the private frontend origin,
+CloudFront distribution, certificate, apex/`www` DNS aliases, and constrained
+GitHub deployment role. No frontend assets were deployed, and production browser
+behavior remains unverified. Do not run further AWS-backed Terraform operations,
 deploy, commit, push, or edit the backend without explicit authorization.
 
 ## Target Topology
@@ -38,15 +41,27 @@ Requirements:
 
 ## Terraform Ownership
 
-Future code belongs in `infra/terraform`. Use the existing state bucket and the
-separate key:
+The frontend stack belongs in `infra/terraform`. It uses the existing state bucket
+and the separate key:
 
 ```text
 s3://albertlukmanovlabs-terraform-state-964866958896/doc-helper-ai-agent-web/prod/terraform.tfstate
 ```
 
 Infrastructure validation may format, initialize without the production backend,
-and validate. Pull-request automation must not apply infrastructure.
+run the fictional plan-audit tests, and validate. Pull-request automation has only
+`contents: read`; it must not receive AWS credentials or OIDC permission and must
+not plan or apply infrastructure.
+
+`infra/terraform/scripts/Assert-FrontendPlan.ps1` ignores data reads and permits
+only explicitly allowlisted managed frontend types whose action array is exactly
+`create` or `no-op`. It must fail on malformed input, unexpected modes/types,
+updates, deletes, replacements, and all other action arrays. Apply only the exact
+saved plan after this audit and complete human review.
+
+The six outputs are non-sensitive deployment and verification values. Current
+provisioned values are recorded in `.agent/tasks/current.md`; read them from
+Terraform again before configuring or running a deployment.
 
 ## Deployment Identity
 
