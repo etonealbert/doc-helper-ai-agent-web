@@ -16,7 +16,6 @@ scope, authorization, and verification.
 - Authentication and user accounts
 - Persistent chat history
 - Streaming responses
-- Internationalization
 - Document upload and administration
 - Admin dashboard and CRM record browser
 - Improved summaries for known tool results

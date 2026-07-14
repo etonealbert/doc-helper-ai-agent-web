@@ -33,16 +33,23 @@ function parseErrorEnvelope(value: unknown): ErrorEnvelope {
     root.detail && typeof root.detail === 'object'
       ? (root.detail as Record<string, unknown>)
       : {}
+  const error =
+    root.error && typeof root.error === 'object'
+      ? (root.error as Record<string, unknown>)
+      : {}
 
   return {
     message:
       readString(detail, 'message', 'error', 'detail') ??
+      readString(error, 'message', 'detail') ??
       readString(root, 'message', 'error', 'detail'),
     code:
       readString(detail, 'code', 'error_code') ??
+      readString(error, 'code', 'error_code') ??
       readString(root, 'code', 'error_code'),
     traceId:
       readString(detail, 'trace_id', 'traceId') ??
+      readString(error, 'trace_id', 'traceId') ??
       readString(root, 'trace_id', 'traceId'),
   }
 }

@@ -1,38 +1,19 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { appConfig } from '../../app/config'
 import { Icon } from '../../shared/components/Icon'
+import { useLocalization } from '../../shared/i18n/localizationContext'
 import { ChatComposer } from './components/ChatComposer'
 import { ChatErrorNotice } from './components/ChatErrorNotice'
 import { ChatMessage } from './components/ChatMessage'
 import { useChat } from './hooks/useChat'
 import styles from '../../styles/ui.module.css'
 
-interface StarterPrompt {
-  label: string
-  type: string
-  safety?: boolean
-}
-
-const starterPrompts: readonly StarterPrompt[] = [
-  { label: 'What are your opening hours?', type: 'General' },
-  { label: 'How much does teeth whitening cost?', type: 'Pricing' },
-  {
-    label: 'I want to book a whitening appointment next Friday.',
-    type: 'Appointment',
-  },
-  { label: 'What is your cancellation policy?', type: 'Policy' },
-  {
-    label: 'I have severe pain and swelling. What should I do?',
-    type: 'Safety demo',
-    safety: true,
-  },
-]
-
 interface ChatFeatureProps {
   knowledgeBaseSummary: ReactNode
 }
 
 export function ChatFeature({ knowledgeBaseSummary }: ChatFeatureProps) {
+  const { messages: copy } = useLocalization()
   const { messages, isPending, error, sessionId, submit, clear, retry } =
     useChat()
   const [draft, setDraft] = useState('')
@@ -41,10 +22,10 @@ export function ChatFeature({ knowledgeBaseSummary }: ChatFeatureProps) {
   const stickToBottom = useRef(true)
   const assistantAnnouncement =
     isPending || error
-      ? ''
-      : (messages.findLast(
+      ? undefined
+      : messages.findLast(
           (message) => message.role === 'assistant' && !message.isWelcome,
-        )?.content ?? '')
+        )
 
   useEffect(() => {
     if (!stickToBottom.current) return
@@ -86,25 +67,27 @@ export function ChatFeature({ knowledgeBaseSummary }: ChatFeatureProps) {
           data-testid="assistant-announcement"
           aria-live="polite"
           aria-atomic="true"
+          lang={assistantAnnouncement?.locale}
         >
-          {assistantAnnouncement}
+          {assistantAnnouncement?.content ?? ''}
         </div>
         <header className={styles.chatHeader}>
           <div>
             <div className={styles.chatTitleLine}>
               <span className={styles.liveDot} aria-hidden="true" />
-              <h1 id="chat-title">Agent workspace</h1>
+              <h1 id="chat-title">{copy.chat.title}</h1>
             </div>
-            <p>Document-grounded conversation and workflow trace</p>
+            <p>{copy.chat.subtitle}</p>
           </div>
           <button
             className={styles.clearButton}
             type="button"
             onClick={clearConversation}
             disabled={messages.length === 1 && !error && !draft}
+            aria-label={copy.chat.clearLabel}
           >
             <Icon name="trash" size={16} />
-            <span>Clear</span>
+            <span>{copy.chat.clear}</span>
           </button>
         </header>
 
@@ -162,19 +145,19 @@ export function ChatFeature({ knowledgeBaseSummary }: ChatFeatureProps) {
         />
       </section>
 
-      <aside className={styles.sideRail} aria-label="Demonstration context">
+      <aside className={styles.sideRail} aria-label={copy.chat.contextLabel}>
         <section className={styles.railSection} aria-labelledby="prompts-title">
           <div className={styles.railHeading}>
             <span className={styles.railIcon}>
               <Icon name="arrow" size={17} />
             </span>
             <div>
-              <p className={styles.eyebrow}>Try a route</p>
-              <h2 id="prompts-title">Starter prompts</h2>
+              <p className={styles.eyebrow}>{copy.chat.tryRoute}</p>
+              <h2 id="prompts-title">{copy.chat.starterPromptsTitle}</h2>
             </div>
           </div>
           <div className={styles.promptList}>
-            {starterPrompts.map((prompt) => (
+            {copy.chat.starterPrompts.map((prompt) => (
               <button
                 key={prompt.label}
                 type="button"
@@ -200,16 +183,13 @@ export function ChatFeature({ knowledgeBaseSummary }: ChatFeatureProps) {
               <Icon name="shield" size={17} />
             </span>
             <div>
-              <p className={styles.eyebrow}>Privacy</p>
-              <h2 id="session-title">Ephemeral session</h2>
+              <p className={styles.eyebrow}>{copy.chat.privacy}</p>
+              <h2 id="session-title">{copy.chat.ephemeralSession}</h2>
             </div>
           </div>
-          <p className={styles.sessionCopy}>
-            Messages stay in this tab and are not saved by the interface. Only a
-            pseudonymous session identifier is stored locally.
-          </p>
+          <p className={styles.sessionCopy}>{copy.chat.sessionCopy}</p>
           <div className={styles.sessionId}>
-            <span>Session</span>
+            <span>{copy.chat.session}</span>
             <code title={sessionId}>{sessionId.slice(0, 18)}...</code>
           </div>
         </section>

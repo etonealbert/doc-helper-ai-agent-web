@@ -1,5 +1,6 @@
 import { useEffect, type KeyboardEvent, type RefObject } from 'react'
 import { Icon } from '../../../shared/components/Icon'
+import { useLocalization } from '../../../shared/i18n/localizationContext'
 import styles from '../../../styles/ui.module.css'
 
 interface ChatComposerProps {
@@ -19,6 +20,8 @@ export function ChatComposer({
   onChange,
   onSubmit,
 }: ChatComposerProps) {
+  const { messages } = useLocalization()
+
   useEffect(() => {
     const input = inputRef.current
     if (!input) return
@@ -48,7 +51,7 @@ export function ChatComposer({
       }}
     >
       <label className={styles.visuallyHidden} htmlFor="chat-message">
-        Message the Doc Helper AI Agent
+        {messages.chat.composerLabel}
       </label>
       <div className={styles.composerFrame}>
         <textarea
@@ -58,18 +61,18 @@ export function ChatComposer({
           rows={1}
           maxLength={maxLength}
           disabled={isPending}
-          placeholder="Ask about services, pricing, policies, or scheduling..."
+          placeholder={messages.chat.composerPlaceholder}
           onChange={(event) => onChange(event.target.value)}
           onKeyDown={handleKeyDown}
         />
         <div className={styles.composerFooter}>
           <span className={styles.composerHint}>
-            Demo only. Do not enter personal or patient data.
+            {messages.chat.composerHint}
           </span>
           <div className={styles.composerControls}>
             <span
               className={`${styles.characterCount} ${remaining < 120 ? styles.characterCountLow : ''}`}
-              aria-label={`${remaining} characters remaining`}
+              aria-label={messages.chat.remainingCharacters(remaining)}
             >
               {value.length}/{maxLength}
             </span>
@@ -78,14 +81,16 @@ export function ChatComposer({
               type="submit"
               disabled={isPending || !value.trim()}
             >
-              <span>{isPending ? 'Working' : 'Send'}</span>
+              <span>
+                {isPending ? messages.chat.working : messages.chat.send}
+              </span>
               <Icon name="send" size={17} />
             </button>
           </div>
         </div>
       </div>
       <span className={styles.visuallyHidden} role="status" aria-live="polite">
-        {isPending ? 'The assistant is preparing a response.' : ''}
+        {isPending ? messages.chat.preparingResponse : ''}
       </span>
     </form>
   )

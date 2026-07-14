@@ -1,9 +1,12 @@
 import { Icon } from '../../../shared/components/Icon'
+import { useLocalization } from '../../../shared/i18n/localizationContext'
 import { useDocuments } from '../hooks/useDocuments'
 import styles from '../../../styles/ui.module.css'
 
 export function KnowledgeBaseSummary() {
   const { data, error, isLoading, retry } = useDocuments()
+  const { locale, messages } = useLocalization()
+  const numberFormat = new Intl.NumberFormat(locale)
 
   return (
     <section className={styles.railSection} aria-labelledby="knowledge-title">
@@ -12,14 +15,14 @@ export function KnowledgeBaseSummary() {
           <Icon name="database" size={17} />
         </span>
         <div>
-          <p className={styles.eyebrow}>Grounding</p>
-          <h2 id="knowledge-title">Knowledge base</h2>
+          <p className={styles.eyebrow}>{messages.documents.grounding}</p>
+          <h2 id="knowledge-title">{messages.documents.knowledgeBase}</h2>
         </div>
       </div>
 
       {isLoading && (
         <div className={styles.skeletonGroup} aria-live="polite">
-          <span>Loading documents</span>
+          <span>{messages.documents.loading}</span>
           <div className={styles.skeleton} />
           <div className={styles.skeletonShort} />
         </div>
@@ -27,10 +30,10 @@ export function KnowledgeBaseSummary() {
 
       {error && !isLoading && (
         <div className={styles.inlineError} role="status">
-          <p>Document metadata is unavailable.</p>
+          <p>{messages.documents.unavailable}</p>
           <button type="button" onClick={() => void retry()}>
             <Icon name="refresh" size={15} />
-            Retry
+            {messages.documents.retry}
           </button>
         </div>
       )}
@@ -39,12 +42,16 @@ export function KnowledgeBaseSummary() {
         <>
           <div className={styles.knowledgeStats}>
             <div>
-              <strong>{data.totalDocuments}</strong>
-              <span>documents</span>
+              <strong>{numberFormat.format(data.totalDocuments)}</strong>
+              <span>
+                {messages.documents.documentCountLabel(data.totalDocuments)}
+              </span>
             </div>
             <div>
-              <strong>{data.totalChunks}</strong>
-              <span>searchable chunks</span>
+              <strong>{numberFormat.format(data.totalChunks)}</strong>
+              <span>
+                {messages.documents.chunkCountLabel(data.totalChunks)}
+              </span>
             </div>
           </div>
           <ul className={styles.documentList}>
@@ -52,7 +59,7 @@ export function KnowledgeBaseSummary() {
               <li key={document.source}>
                 <Icon name="document" size={15} />
                 <span title={document.source}>{document.source}</span>
-                <small>{document.chunks}</small>
+                <small>{numberFormat.format(document.chunks)}</small>
               </li>
             ))}
           </ul>

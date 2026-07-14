@@ -9,9 +9,29 @@ const request = {
   message: 'What is the demonstration price?',
   userId: 'web-user-test',
   sessionId: 'session-test',
+  locale: 'en' as const,
 }
 
 describe('sendChat', () => {
+  it('sends the selected locale in the request body', async () => {
+    let body: unknown
+    server.use(
+      http.post(`${API_BASE}/api/chat`, async ({ request }) => {
+        body = await request.json()
+        return HttpResponse.json(chatFixture)
+      }),
+    )
+
+    await sendChat(request)
+
+    expect(body).toEqual({
+      message: request.message,
+      user_id: request.userId,
+      session_id: request.sessionId,
+      locale: 'en',
+    })
+  })
+
   it('converts chat metadata to the frontend model', async () => {
     await expect(sendChat(request)).resolves.toEqual({
       message: chatFixture.message,
@@ -20,6 +40,7 @@ describe('sendChat', () => {
       requiresHuman: false,
       sources: ['pricing.md'],
       traceId: 'trace-demo-001',
+      locale: 'en',
     })
   })
 
@@ -30,6 +51,7 @@ describe('sendChat', () => {
           message: 'A safe demonstration answer.',
           classification: 'general_question',
           trace_id: 'trace-defaults',
+          locale: 'en',
         }),
       ),
     )
@@ -137,6 +159,18 @@ describe('sendChat', () => {
           ...chatFixture,
           classification: 'unsupported',
         }),
+      ),
+    )
+
+    await expect(sendChat(request)).rejects.toMatchObject({
+      kind: 'invalid_response',
+    })
+  })
+
+  it('rejects an unsupported response locale', async () => {
+    server.use(
+      http.post(`${API_BASE}/api/chat`, () =>
+        HttpResponse.json({ ...chatFixture, locale: 'fr' }),
       ),
     )
 

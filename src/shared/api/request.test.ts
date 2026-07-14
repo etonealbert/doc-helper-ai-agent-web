@@ -36,6 +36,30 @@ describe('apiRequest', () => {
     })
   })
 
+  it('reads the backend root error object', async () => {
+    server.use(
+      http.get(`${API_BASE}/backend-error`, () =>
+        HttpResponse.json(
+          {
+            error: {
+              code: 'crm_unavailable',
+              message: 'CRM persistence is unavailable.',
+              trace_id: 'trace-backend-error',
+            },
+          },
+          { status: 503 },
+        ),
+      ),
+    )
+
+    await expect(apiRequest('/backend-error', String)).rejects.toMatchObject({
+      message: 'CRM persistence is unavailable.',
+      code: 'crm_unavailable',
+      traceId: 'trace-backend-error',
+      kind: 'service_unavailable',
+    })
+  })
+
   it('maps 422 responses to a safe validation error', async () => {
     server.use(
       http.get(`${API_BASE}/validation-error`, () =>
@@ -52,6 +76,9 @@ describe('apiRequest', () => {
     expect(error).toMatchObject({ status: 422, kind: 'validation' })
     expect(getSafeErrorMessage(error)).toBe(
       'The request could not be processed. Review your message and try again.',
+    )
+    expect(getSafeErrorMessage(error, 'es')).toBe(
+      'No se pudo procesar la solicitud. Revisa tu mensaje e inténtalo de nuevo.',
     )
   })
 

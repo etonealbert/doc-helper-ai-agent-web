@@ -23,4 +23,12 @@ export const chatFixture = {
   requires_human: false,
   sources: ['pricing.md'],
   trace_id: 'trace-demo-001',
+  locale: 'en',
+}
+
+export const spanishChatFixture = {
+  ...chatFixture,
+  message: 'El precio de demostración figura en la base de conocimiento.',
+  trace_id: 'trace-demo-es-001',
+  locale: 'es',
 }

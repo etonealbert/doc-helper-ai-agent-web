@@ -26,10 +26,11 @@ flowchart LR
 
 ### Application shell
 
-`src/App.tsx` composes the persistent header, API health indicator, safety banner,
-chat feature, document summary, and footer. `src/app/providers.tsx` supplies the
-application Query client, while `src/app/config.ts` validates runtime
-configuration at module initialization.
+`src/App.tsx` composes the persistent header, language switcher, API health
+indicator, safety banner, chat feature, document summary, and footer.
+`src/app/providers.tsx` supplies the application Query client and localization
+provider, while `src/app/config.ts` validates runtime configuration at module
+initialization.
 
 ### Feature ownership
 
@@ -54,6 +55,8 @@ another's internals. Cross-feature composition belongs at the application level:
 - `src/shared/hooks/usePersistentSession.ts` owns pseudonymous identifiers and
   session persistence.
 - `src/shared/components/Icon.tsx` contains the local icon vocabulary.
+- `src/shared/i18n` owns the typed English/Spanish catalog, Spanish default,
+  memory-only locale context, and document metadata synchronization.
 - `src/shared/lib/format.ts` owns labels, trace formatting, and structured-result
   redaction.
 
@@ -67,10 +70,16 @@ another's internals. Cross-feature composition belongs at the application level:
 | Session ID                   | `usePersistentSession`       | `localStorage`                       |
 | Pseudonymous user ID         | `usePersistentSession`       | Memory; recreated on reload          |
 | Composer draft               | `ChatFeature`                | Memory only                          |
+| Interface locale             | `LocalizationProvider`       | Memory only; defaults to `es`        |
 | Health response              | `useHealth` / Query cache    | Memory; polled every 45 seconds      |
 | Document summary             | `useDocuments` / Query cache | Memory; fetched on mount             |
 
-Clearing a conversation aborts the active request, discards visible messages,
+Changing locale updates frontend-owned copy and metadata without clearing the
+draft, transcript, session, or active request. Each chat operation captures its
+locale at submission; retries retain that locale, and assistant messages retain
+the response locale for the `lang` attribute. Backend and user text is never
+translated in the browser. Clearing a conversation aborts the active request,
+discards visible messages,
 clears the error, and rotates the session ID. Message content is never written to
 browser storage by this application.
 
@@ -90,7 +99,7 @@ sequenceDiagram
     ChatHook->>ChatHook: Append user message and lock submission
     ChatHook->>ChatHook: Store request in operation-owned ref
     ChatHook->>ChatAPI: Void Query mutation reads active request ref
-    ChatAPI->>Request: POST /api/chat + validator
+    ChatAPI->>Request: POST /api/chat with locale + validator
     Request->>API: JSON request with abort signal
     API-->>Request: Unknown JSON response
     Request->>ChatAPI: Validate response
@@ -103,7 +112,9 @@ documents, and chat use separate feature schemas. The chat schema defaults omitt
 `actions` and `sources` to empty arrays, `requires_human` to `false`, and an
 omitted action `result` to `null`; a present result must be a record object.
 Documents default omitted document lists and totals to empty/zero values.
-Classifications and action statuses remain strict enums. Invalid JSON and schema
+Classifications, action statuses, and response locales remain strict enums. The
+chat request and response use `locale: "es" | "en"`; Spanish is the backend and
+frontend default. Invalid JSON and schema
 mismatches become `ApiError` instances rather than partially rendered data.
 
 The shared request layer combines safe metadata from root and object-valued
@@ -137,10 +148,17 @@ request fails. A completed assistant answer repopulates it; the empty transition
 ensures consecutive identical answers are announced again without re-announcing a
 historical answer alongside a newer error.
 
+The static HTML metadata is Spanish. The localization provider synchronizes the
+document `lang`, title, and description when the user switches languages. A
+two-option pressed-button group exposes both languages by autonym, remains
+keyboard-operable, and fits narrow layouts. Historical assistant text and the
+completion live region use the locale returned with that response.
+
 ## Dependency Strategy
 
 The runtime uses React, React DOM, TanStack Query for cancellable server state,
-and Zod for response validation. Conversation messages remain in local React
+and Zod for response validation. Localization uses a typed local catalog and
+browser APIs rather than an additional runtime dependency. Conversation messages remain in local React
 state rather than the Query cache. Do not add a state manager or UI framework
 unless a real maintenance or behavior need outweighs the added surface area.
 

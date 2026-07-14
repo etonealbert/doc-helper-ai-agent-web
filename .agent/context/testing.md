@@ -43,7 +43,9 @@ API and request coverage includes:
 - chat metadata conversion and omitted backend defaults;
 - object-only present action results and rejection of arrays, scalars, and null;
 - strict classifications and action statuses;
+- strict `es`/`en` response locales and selected-locale request bodies;
 - mixed root and nested error metadata;
+- the backend's object-valued root `error` envelope;
 - safe `422`, `429`, generic `5xx`, invalid JSON, timeout, and caller abort behavior;
 - Query retry and stale-time defaults; and
 - configuration error cause retention.
@@ -61,6 +63,10 @@ UI and utility coverage includes:
 - health display, cancellation, and 45-second polling;
 - document retry and cancellation; and
 - recursive structured-result redaction.
+- Spanish default document metadata and interface copy;
+- English switching without draft, transcript, or session loss;
+- locale-stable in-flight requests, retries, answers, and `lang` attributes; and
+- Spanish emergency framing with the original backend answer preserved.
 
 ## Testing Conventions
 
@@ -69,6 +75,8 @@ UI and utility coverage includes:
 - Use MSW at the network boundary rather than mocking `fetch` in component tests.
 - Keep pure schema and formatter tests fast and isolated.
 - Restore handlers, storage, clipboard stubs, mocks, and fake timers after use.
+- Use English explicitly for legacy-focused component assertions; test the
+  production Spanish default through `AppProviders`.
 - Avoid snapshots for dynamic workflow output; assert key behavior and content.
 - Add regression coverage with every bug fix or behavior change.
 

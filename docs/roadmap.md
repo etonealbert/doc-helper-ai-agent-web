@@ -22,6 +22,7 @@ verification criteria.
   fixtures, and a backendless validation workflow definition
 - Provisioned and infrastructure-verified private S3, CloudFront OAC, ACM,
   Route 53 apex/`www` aliases, and constrained GitHub OIDC deployment role
+- Spanish-default English/Spanish interface and coordinated localized chat contract
 
 ## Quality Follow-Up
 
@@ -41,7 +42,6 @@ verification criteria.
 ## Product Enhancements
 
 - Streaming responses
-- Internationalization
 - Improved tool-result summaries for known action types
 - Optional explicit user controls for clearing copied trace feedback
 - Playwright deployment checks

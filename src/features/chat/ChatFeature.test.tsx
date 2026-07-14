@@ -7,6 +7,8 @@ import { chatFixture } from '../../test/fixtures'
 import { API_BASE } from '../../test/handlers'
 import { renderWithProviders } from '../../test/render'
 import { server } from '../../test/server'
+import { LanguageSwitcher } from '../../shared/components/LanguageSwitcher'
+import type { Locale } from '../../shared/i18n/messages'
 import { ChatFeature } from './ChatFeature'
 
 vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({ matches: false }))
@@ -17,9 +19,22 @@ Object.defineProperty(Element.prototype, 'scrollTo', {
 
 const knowledgeBaseSummary = <div>Knowledge test double</div>
 
-function renderChat() {
+function renderChat(locale: Locale = 'en') {
   return renderWithProviders(
     <ChatFeature knowledgeBaseSummary={knowledgeBaseSummary} />,
+    undefined,
+    locale,
+  )
+}
+
+function renderChatWithSwitcher(locale: Locale) {
+  return renderWithProviders(
+    <>
+      <LanguageSwitcher />
+      <ChatFeature knowledgeBaseSummary={knowledgeBaseSummary} />
+    </>,
+    undefined,
+    locale,
   )
 }
 
@@ -79,6 +94,17 @@ function expectNoMutationFailureState(observations: MutationPrivacyState[][]) {
 }
 
 describe('ChatFeature', () => {
+  it('does not scroll the transcript while editing the draft', async () => {
+    const user = userEvent.setup()
+    renderChat()
+    const scrollTo = vi.mocked(Element.prototype.scrollTo)
+    scrollTo.mockClear()
+
+    await user.type(getComposer(), 'Draft text')
+
+    expect(scrollTo).not.toHaveBeenCalled()
+  })
+
   it('renders and announces the complete assistant response after submission', async () => {
     const user = userEvent.setup()
     renderChat()
@@ -238,13 +264,15 @@ describe('ChatFeature', () => {
       resolveResponse = resolve
     })
     let requestBody:
-      { message: string; user_id: string; session_id: string } | undefined
+      | { message: string; user_id: string; session_id: string; locale: string }
+      | undefined
     server.use(
       http.post(`${API_BASE}/api/chat`, async ({ request }) => {
         requestBody = (await request.json()) as {
           message: string
           user_id: string
           session_id: string
+          locale: string
         }
         resolveStarted()
         await responseReady
@@ -265,6 +293,7 @@ describe('ChatFeature', () => {
     expect(mutations[0].state.variables).toBeUndefined()
     expect(mutations[0].state.data).toBeUndefined()
     expect(requestBody).toBeDefined()
+    expect(requestBody?.locale).toBe('en')
 
     const cachedWhilePending = JSON.stringify(
       mutations.map(({ state }) => state),
@@ -290,7 +319,8 @@ describe('ChatFeature', () => {
     const backendAction = 'private_crm_action_payload'
     let calls = 0
     let requestBody:
-      { message: string; user_id: string; session_id: string } | undefined
+      | { message: string; user_id: string; session_id: string; locale: string }
+      | undefined
     server.use(
       http.post(`${API_BASE}/api/chat`, async ({ request }) => {
         calls += 1
@@ -298,6 +328,7 @@ describe('ChatFeature', () => {
           message: string
           user_id: string
           session_id: string
+          locale: string
         }
         return HttpResponse.json(
           {
@@ -346,7 +377,8 @@ describe('ChatFeature', () => {
     const submittedMessage = 'What are your opening hours?'
     let calls = 0
     let requestBody:
-      { message: string; user_id: string; session_id: string } | undefined
+      | { message: string; user_id: string; session_id: string; locale: string }
+      | undefined
     server.use(
       http.post(`${API_BASE}/api/chat`, async ({ request }) => {
         calls += 1
@@ -354,6 +386,7 @@ describe('ChatFeature', () => {
           message: string
           user_id: string
           session_id: string
+          locale: string
         }
         return HttpResponse.error()
       }),
@@ -407,6 +440,48 @@ describe('ChatFeature', () => {
     expect(calls).toBe(2)
   })
 
+  it('retries with the failed operation locale after the interface language changes', async () => {
+    const user = userEvent.setup()
+    const locales: string[] = []
+    let calls = 0
+    const spanishAnswer = 'Respuesta de demostración en español.'
+    server.use(
+      http.post(`${API_BASE}/api/chat`, async ({ request }) => {
+        calls += 1
+        const body = (await request.json()) as { locale: string }
+        locales.push(body.locale)
+        return calls === 1
+          ? HttpResponse.error()
+          : HttpResponse.json({
+              ...chatFixture,
+              message: spanishAnswer,
+              locale: 'es',
+            })
+      }),
+    )
+    renderChatWithSwitcher('es')
+
+    await user.type(
+      screen.getByRole('textbox', {
+        name: 'Enviar un mensaje a Doc Helper AI Agent',
+      }),
+      '¿Cuál es el precio de demostración?',
+    )
+    await user.click(screen.getByRole('button', { name: 'Enviar' }))
+    expect(
+      await screen.findByText(/No pudimos conectar con el asistente/i),
+    ).toBeVisible()
+
+    await user.click(screen.getByRole('button', { name: 'English' }))
+    await user.click(screen.getByRole('button', { name: 'Retry' }))
+
+    expect(await findMessageText(spanishAnswer)).toHaveAttribute('lang', 'es')
+    expect(locales).toEqual(['es', 'es'])
+    expect(
+      screen.getAllByRole('article', { name: 'You message' }),
+    ).toHaveLength(1)
+  })
+
   it('preserves an emergency response and shows the professional-help warning', async () => {
     const user = userEvent.setup()
     const emergencyAnswer =
@@ -433,6 +508,42 @@ describe('ChatFeature', () => {
     const warning = screen.getByRole('alert')
     expect(warning).toHaveTextContent('Professional help may be needed')
     expect(warning).toHaveTextContent('has not contacted emergency services')
+  })
+
+  it('shows the emergency warning in Spanish without replacing the backend answer', async () => {
+    const user = userEvent.setup()
+    const emergencyAnswer =
+      'Esta demostración no puede evaluar síntomas. Busca ayuda profesional.'
+    server.use(
+      http.post(`${API_BASE}/api/chat`, () =>
+        HttpResponse.json({
+          ...chatFixture,
+          message: emergencyAnswer,
+          classification: 'emergency_or_pain',
+          requires_human: true,
+          actions: [],
+          sources: [],
+          trace_id: 'trace-emergency-es-001',
+          locale: 'es',
+        }),
+      ),
+    )
+    renderChat('es')
+
+    await user.type(
+      screen.getByRole('textbox', {
+        name: 'Enviar un mensaje a Doc Helper AI Agent',
+      }),
+      'Tengo dolor intenso e hinchazón.',
+    )
+    await user.click(screen.getByRole('button', { name: 'Enviar' }))
+
+    expect(await findMessageText(emergencyAnswer)).toBeVisible()
+    const warning = screen.getByRole('alert')
+    expect(warning).toHaveTextContent('Puede ser necesaria ayuda profesional')
+    expect(warning).toHaveTextContent(
+      'no ha contactado a los servicios de emergencia',
+    )
   })
 
   it('preserves a non-emergency human-review response without confirming follow-up', async () => {
@@ -464,6 +575,31 @@ describe('ChatFeature', () => {
       'A callback or ticket is only confirmed when a successful action below explicitly says so.',
     )
     expect(screen.queryByText('Agent actions')).not.toBeInTheDocument()
+  })
+
+  it('preserves an unknown tool identifier exactly', async () => {
+    const user = userEvent.setup()
+    server.use(
+      http.post(`${API_BASE}/api/chat`, () =>
+        HttpResponse.json({
+          ...chatFixture,
+          actions: [
+            {
+              tool: 'new_backend_tool',
+              status: 'success',
+              result: {},
+            },
+          ],
+        }),
+      ),
+    )
+    renderChat()
+
+    await user.type(getComposer(), 'Run the demonstration tool.')
+    await user.click(screen.getByRole('button', { name: 'Send' }))
+
+    expect(await screen.findByText('new_backend_tool')).toBeVisible()
+    expect(screen.queryByText('New Backend Tool')).not.toBeInTheDocument()
   })
 
   it('populates the composer from a starter prompt', async () => {
@@ -540,6 +676,7 @@ describe('ChatFeature', () => {
       message: string
       user_id: string
       session_id: string
+      locale: string
     }> = []
     let resolveStarted!: () => void
     let resolveAborted!: (event: Event) => void
@@ -555,6 +692,7 @@ describe('ChatFeature', () => {
           message: string
           user_id: string
           session_id: string
+          locale: string
         }
         requests.push(body)
         if (requests.length === 1) {

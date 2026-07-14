@@ -184,9 +184,14 @@ After separately authorized CORS and deployment work, verify:
 1. The exact quality-tested `dist` artifact is deployed.
 2. HTTPS serves the current application shell and fingerprinted assets.
 3. The API status loads without browser CORS errors.
-4. Fictional opening-hours and pricing prompts return grounded answers and sources.
-5. Appointment actions and safety escalation render without claiming unconfirmed outcomes.
-6. Trace copying and the 360px layout remain usable.
-7. Reloading the frontend URL returns the application shell.
+4. The static shell loads in Spanish with matching `lang`, title, and description.
+5. Spanish and English fictional opening-hours and pricing prompts return grounded
+   answers and sources in the selected language.
+6. Switching language preserves the draft, transcript, session, and any in-flight
+   operation's original response language.
+7. Appointment actions and safety escalation render in both languages without
+   claiming unconfirmed outcomes.
+8. Trace copying, the language control, and the 360px layout remain usable.
+9. Reloading the frontend URL returns the Spanish application shell.
 
 Until those checks succeed, the frontend URL remains intended and unverified.

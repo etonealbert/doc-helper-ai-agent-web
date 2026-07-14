@@ -40,6 +40,10 @@ command passed unless it was actually run in the current working tree.
   internals into another feature.
 - Keep conversation messages in React state, not API cache or browser storage.
 - Store only the generated session ID in `localStorage`.
+- Keep interface locale in `src/shared/i18n`, default it to Spanish, and do not
+  persist it.
+- Capture `es` or `en` per chat operation; preserve that locale for retries and
+  historical backend answers.
 - Route all HTTP calls through `src/shared/api/request.ts`.
 - Keep environment access and defaults in `src/app/config.ts`.
 - Use CSS design tokens from `src/styles/tokens.css` and component styles from
@@ -95,6 +99,7 @@ explicitly authorizes it. Read
 - Runtime configuration: `src/app/config.ts`
 - HTTP behavior: `src/shared/api/request.ts` and `src/shared/api/ApiError.ts`
 - Endpoint validation: feature Zod schemas in `api` modules
+- Localization catalogs and state: `src/shared/i18n/`
 - Query configuration: `src/app/queryClient.ts` and `src/app/providers.tsx`
 - Chat state: `src/features/chat/hooks/useChat.ts`
 - Product composition: `src/App.tsx` and `src/features/chat/ChatFeature.tsx`

@@ -13,6 +13,7 @@ Full architecture: [../../docs/architecture.md](../../docs/architecture.md)
 - Vite and strict TypeScript
 - Native `fetch` and `AbortController`
 - CSS Modules plus global design tokens
+- Dependency-free typed English/Spanish localization
 - No router, state manager, component framework, or CSS framework
 
 ## Ownership
@@ -24,6 +25,7 @@ Full architecture: [../../docs/architecture.md](../../docs/architecture.md)
 - `src/shared/api`: transport and safe errors
 - `src/shared/components`: cross-feature visual primitives
 - `src/shared/hooks`: browser-persistence behavior
+- `src/shared/i18n`: catalogs, locale context, and document metadata synchronization
 - `src/shared/lib`: pure formatting and redaction utilities
 - `src/styles`: tokens, reset, globals, and application CSS Module
 
@@ -35,6 +37,7 @@ into `ChatFeature`.
 ## State
 
 - Chat messages and draft: memory only
+- Interface locale: memory only; defaults to Spanish on every load
 - Session ID: `localStorage`
 - Pseudonymous user ID: memory; regenerated on page load
 - Health and documents: in-memory Query cache exposed through feature hooks
@@ -60,6 +63,11 @@ session ID. Do not persist message content.
 ## Components
 
 - Components do not call `fetch` directly.
+- Frontend-owned copy comes from `src/shared/i18n`; backend and user text remains
+  unchanged.
+- Locale changes preserve the draft, transcript, session, and active request.
+- Each chat operation captures its locale; retries and validated assistant
+  responses retain it.
 - Keep native controls and semantics where possible.
 - Tool data is sanitized and rendered as text, never HTML.
 - Starter prompts populate the input; they do not submit automatically.
@@ -74,6 +82,8 @@ session ID. Do not persist message content.
 - Preserve the restrained neutral, teal, and blue visual system.
 - Keep cards at 8px radius or below.
 - Maintain support around 360px, tablet, desktop, and large desktop widths.
+- Keep the two-language header control usable without crowding the brand or health
+  control.
 - Keep stable control dimensions, wrapping, and overflow behavior.
 - Honor reduced motion and visible focus.
 
@@ -85,12 +95,15 @@ session ID. Do not persist message content.
   it with completed non-welcome answers; keep pending and copy status
   announcements distinct.
 - Preserve semantic landmarks and heading order.
+- Synchronize root `lang` and metadata, and retain response-level `lang` on
+  historical assistant answers and the completion announcement.
 - Keep tool disclosures keyboard-operable with native `details/summary`.
 - Do not rely on color alone for health, classification, or errors.
 
 ## Safety
 
-The demo disclaimer must remain near the chat and in the footer. Emergency and
+The demo disclaimer must remain near the chat and in the footer in both supported
+languages. Emergency and
 human escalation require calm, prominent framing. The UI must not claim a real
 care outcome, diagnosis, treatment, appointment, callback, ticket, or emergency
 contact unless confirmed by a successful backend action.

@@ -1,7 +1,9 @@
 import { useMutation } from '@tanstack/react-query'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { ApiError, getSafeErrorMessage } from '../../../shared/api/ApiError'
 import { usePersistentSession } from '../../../shared/hooks/usePersistentSession'
+import { useLocalization } from '../../../shared/i18n/localizationContext'
+import type { Locale } from '../../../shared/i18n/messages'
 import { sendChat } from '../api/chatApi'
 import type { ChatResponse, ConversationMessage } from '../model/types'
 
@@ -9,20 +11,21 @@ const welcomeMessage: ConversationMessage = {
   id: 'welcome',
   role: 'assistant',
   isWelcome: true,
-  content:
-    'Hello. I can answer questions from the demonstration knowledge base, explain pricing and policies, or show how appointment and escalation workflows are routed.',
+  content: '',
 }
 
 interface ChatErrorState {
-  message: string
+  cause: unknown
   traceId?: string
   failedMessage: string
+  locale: Locale
 }
 
 interface ChatOperation {
   message: string
   userId: string
   sessionId: string
+  locale: Locale
   controller: AbortController
 }
 
@@ -41,10 +44,11 @@ function readOperationValue<T>(operationRef: { current: T | null }) {
 }
 
 export function useChat() {
+  const { locale, messages: copy } = useLocalization()
   const [messages, setMessages] = useState<ConversationMessage[]>([
     welcomeMessage,
   ])
-  const [error, setError] = useState<ChatErrorState | null>(null)
+  const [errorState, setErrorState] = useState<ChatErrorState | null>(null)
   const activeRequest = useRef<ChatOperation | null>(null)
   const activeResponse = useRef<ChatOperationResponse | null>(null)
   const activeFailure = useRef<ChatOperationFailure | null>(null)
@@ -60,6 +64,7 @@ export function useChat() {
           message: operation.message,
           userId: operation.userId,
           sessionId: operation.sessionId,
+          locale: operation.locale,
           signal: operation.controller.signal,
         })
         if (
@@ -91,7 +96,11 @@ export function useChat() {
     [resetMutation],
   )
 
-  const execute = async (rawMessage: string, appendUserMessage: boolean) => {
+  const execute = async (
+    rawMessage: string,
+    appendUserMessage: boolean,
+    operationLocale: Locale,
+  ) => {
     const message = rawMessage.trim()
     if (!message || pendingRequest.current) return false
 
@@ -100,16 +109,18 @@ export function useChat() {
         id: crypto.randomUUID(),
         role: 'user',
         content: message,
+        locale: operationLocale,
       }
       setMessages((current) => [...current, userMessage])
     }
-    setError(null)
+    setErrorState(null)
     pendingRequest.current = true
 
     const operation: ChatOperation = {
       message,
       userId,
       sessionId,
+      locale: operationLocale,
       controller: new AbortController(),
     }
     activeRequest.current = operation
@@ -135,15 +146,17 @@ export function useChat() {
           role: 'assistant',
           content: completed.response.message,
           response: completed.response,
+          locale: completed.response.locale,
         },
       ])
       return true
     } catch (cause) {
       if (!operation.controller.signal.aborted) {
-        setError({
-          message: getSafeErrorMessage(cause),
+        setErrorState({
+          cause,
           traceId: cause instanceof ApiError ? cause.traceId : undefined,
           failedMessage: message,
+          locale: operationLocale,
         })
       }
       return false
@@ -158,7 +171,7 @@ export function useChat() {
     }
   }
 
-  const submit = (message: string) => execute(message, true)
+  const submit = (message: string) => execute(message, true, locale)
 
   const clear = () => {
     activeRequest.current?.controller.abort()
@@ -167,19 +180,37 @@ export function useChat() {
     activeFailure.current = null
     pendingRequest.current = false
     setMessages([welcomeMessage])
-    setError(null)
+    setErrorState(null)
     resetMutation()
     resetSession()
   }
 
+  const localizedMessages = useMemo(
+    () =>
+      messages.map((message) =>
+        message.isWelcome
+          ? { ...message, content: copy.chat.welcome, locale }
+          : message,
+      ),
+    [copy.chat.welcome, locale, messages],
+  )
+  const error = errorState
+    ? {
+        message: getSafeErrorMessage(errorState.cause, locale),
+        traceId: errorState.traceId,
+      }
+    : null
+
   return {
-    messages,
+    messages: localizedMessages,
     isPending: mutation.isPending,
     error,
     sessionId,
     submit,
     clear,
     retry: () =>
-      error ? execute(error.failedMessage, false) : Promise.resolve(false),
+      errorState
+        ? execute(errorState.failedMessage, false, errorState.locale)
+        : Promise.resolve(false),
   }
 }

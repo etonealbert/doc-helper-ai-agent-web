@@ -1,13 +1,15 @@
 import { Icon } from '../../../shared/components/Icon'
-import {
-  formatStructuredData,
-  humanizeIdentifier,
-} from '../../../shared/lib/format'
+import { useLocalization } from '../../../shared/i18n/localizationContext'
+import { formatStructuredData } from '../../../shared/lib/format'
 import type { ToolAction } from '../model/types'
 import styles from '../../../styles/ui.module.css'
 
 export function ToolActionCard({ action }: { action: ToolAction }) {
-  const formattedResult = formatStructuredData(action.result)
+  const { messages } = useLocalization()
+  const formattedResult = formatStructuredData(
+    action.result,
+    messages.chat.noResultDetails,
+  )
   const succeeded = action.status.toLowerCase() === 'success'
 
   return (
@@ -19,15 +21,15 @@ export function ToolActionCard({ action }: { action: ToolAction }) {
           <Icon name={succeeded ? 'check' : 'activity'} size={14} />
         </span>
         <span className={styles.toolName}>
-          {humanizeIdentifier(action.tool)}
+          {messages.chat.tools[action.tool] ?? action.tool}
         </span>
         <span className={styles.toolStatus}>
-          {humanizeIdentifier(action.status)}
+          {messages.chat.toolStatuses[action.status]}
         </span>
         <Icon className={styles.disclosureIcon} name="chevron" size={15} />
       </summary>
       <div className={styles.toolResult}>
-        <p>Safe result preview</p>
+        <p>{messages.chat.safeResultPreview}</p>
         <pre>{formattedResult}</pre>
       </div>
     </details>

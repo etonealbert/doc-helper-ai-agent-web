@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { supportedLocales } from '../../../shared/i18n/messages'
 import {
   classifications,
   toolStatuses,
@@ -22,6 +23,7 @@ export const chatResponseSchema = z
     requires_human: z.boolean().default(false),
     sources: z.array(z.string()).default([]),
     trace_id: z.string(),
+    locale: z.enum(supportedLocales),
   })
   .transform(({ requires_human, trace_id, ...response }): ChatResponse => ({
     ...response,
