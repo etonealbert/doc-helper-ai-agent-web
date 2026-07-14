@@ -29,10 +29,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version-file: .nvmrc
           cache: npm
@@ -56,7 +56,7 @@ jobs:
         run: npm run build
 
       - name: Upload tested build artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: frontend-dist-${{ github.sha }}
           path: dist
@@ -78,17 +78,38 @@ jobs:
       id-token: write
 
     steps:
+      - name: Validate deployment configuration
+        shell: bash
+        env:
+          AWS_ROLE_ARN: ${{ vars.AWS_ROLE_ARN }}
+          FRONTEND_BUCKET_NAME: ${{ vars.FRONTEND_BUCKET_NAME }}
+          CLOUDFRONT_DISTRIBUTION_ID: ${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}
+          FRONTEND_URL: ${{ vars.FRONTEND_URL }}
+        run: |
+          set -euo pipefail
+
+          missing=0
+          for variable in AWS_ROLE_ARN FRONTEND_BUCKET_NAME CLOUDFRONT_DISTRIBUTION_ID FRONTEND_URL; do
+            if [ -z "${!variable:-}" ]; then
+              echo "::error::Missing GitHub production environment variable: ${variable}"
+              missing=1
+            fi
+          done
+
+          exit "${missing}"
+
       - name: Download tested build artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: frontend-dist-${{ github.sha }}
           path: dist
 
       - name: Configure AWS credentials through OIDC
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
+          allowed-account-ids: '964866958896'
 
       - name: Upload non-hashed public files
         shell: bash

@@ -23,11 +23,11 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Test create-only plan audit
         shell: pwsh
         run: ./infra/terraform/tests/Assert-FrontendPlan.Tests.ps1
-      - uses: hashicorp/setup-terraform@v3
+      - uses: hashicorp/setup-terraform@v4
         with:
           terraform_version: 1.10.5
       - run: terraform fmt -check -recursive infra/terraform

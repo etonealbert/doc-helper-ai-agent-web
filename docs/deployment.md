@@ -172,6 +172,11 @@ Their presence, protection rules, approval behavior, and correctness were not
 verified. Environment-scoped build values are available only after the quality
 job's production-environment gate is satisfied.
 
+Configure these as variables under **Settings > Environments > production >
+Environment variables**, not as Actions secrets. The workflow reads the `vars`
+context; a value stored only in `secrets` is intentionally unavailable to these
+expressions.
+
 ## Production Verification
 
 After separately authorized CORS and deployment work, verify:

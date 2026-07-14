@@ -131,6 +131,10 @@ verification but are not required by the deployment workflow. Environment
 protection and values must be configured and verified separately; Terraform apply
 does not deploy frontend assets or run that workflow.
 
+Create these values under **Settings > Environments > production > Environment
+variables**. They are non-secret identifiers read through GitHub's `vars` context,
+not the `secrets` context.
+
 ## Caching And Cost
 
 The distribution cache policy permits origin metadata from the deployment

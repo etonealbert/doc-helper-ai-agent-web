@@ -265,3 +265,4 @@ if ($failures.Count -gt 0) {
 }
 
 Write-Output "Assert-FrontendPlan tests passed: $($cases.Count) cases."
+exit 0
